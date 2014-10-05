@@ -1,0 +1,22 @@
+{
+  "name": "backbone-localcache",
+  "version": "0.1.0",
+  "homepage": "https://github.com/khamaileon/backbone-localcache",
+  "keywords": [
+    "backbone",
+    "cache",
+    "local",
+    "storage"
+  ],
+  "authors": [
+    "khamaileon"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "backbone": "~1.1.2"
+  },
+  "devDependencies": {
+    "qunit": "~1.15.0",
+    "backbone-faux-server": "~0.10.4"
+  }
+}
