@@ -1,4 +1,19 @@
-(function () {
+(function (root, factory) {
+
+    // Set up Backbone-LocalCache appropriately for the environment. Start with AMD.
+    if (typeof define === 'function' && define.amd) {
+        define(['backbone', 'underscore', 'exports'], factory);
+
+    // Next for Node.js or CommonJS.
+    } else if (typeof exports !== 'undefined') {
+        factory(exports, require('backbone'), require('underscore'));
+
+    // Finally, as a browser global.
+    } else {
+        factory(root, root.Backbone, root._);
+    }
+
+}(this, function (exports, Backbone, _) {
 
     "use strict";
 
