@@ -1,5 +1,6 @@
 {
   "name": "backbone-localcache",
+  "main": "backbone-localcache.js",
   "version": "0.1.0",
   "homepage": "https://github.com/khamaileon/backbone-localcache",
   "keywords": [
@@ -12,11 +13,18 @@
     "khamaileon"
   ],
   "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "vendor",
+    "test"
+  ],
   "dependencies": {
     "backbone": "~1.1.2"
   },
   "devDependencies": {
     "qunit": "~1.15.0",
-    "backbone-faux-server": "~0.10.4"
+    "backbone-faux-server": "~0.10.4",
+    "backbone-relational": "~0.8.8"
   }
 }
