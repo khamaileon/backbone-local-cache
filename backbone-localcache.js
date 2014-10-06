@@ -2,7 +2,7 @@
 
     // Set up Backbone-LocalCache appropriately for the environment. Start with AMD.
     if (typeof define === 'function' && define.amd) {
-        define(['backbone', 'underscore', 'exports'], factory);
+        define(['exports', 'backbone', 'underscore'], factory);
 
     // Next for Node.js or CommonJS.
     } else if (typeof exports !== 'undefined') {
@@ -16,6 +16,13 @@
 }(this, function (exports, Backbone, _) {
 
     "use strict";
+
+    var createUuid = function () {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            var r = Math.random()*16|0, v = c === 'x' ? r : (r&0x3|0x8);
+            return v.toString(16);
+        });
+    }
 
     // https://stackoverflow.com/questions/2010892/storing-objects-in-html5-localstorage
     Storage.prototype.setObject = function (key, value) {
@@ -89,7 +96,7 @@
 
             if (self.isNew()) {
                 if (!self.uuid) {
-                    self.uuid = utils.createUuid();
+                    self.uuid = createUuid();
                 }
                 lsKey = self.uuid;
             } else {
@@ -293,4 +300,4 @@
         }
     };
 
-}());
+}));
