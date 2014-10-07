@@ -224,7 +224,7 @@
             }
         },
 
-        getOrCreate: function (key, val, options) {
+        fetchOrSave: function (key, val, options) {
             var self = this,
                 attrs = self.attributes;
  
