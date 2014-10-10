@@ -87,6 +87,8 @@
     });
 
     QUnit.asyncTest('local model save', function (assert) {
+        expect(4);
+
         var book = new BookModel({
             title: 'Book title',
             author: 'Book author'
@@ -98,8 +100,8 @@
             remote: false,
             autoSync: false,
             success: function (model, response) {
-                assert.equal(localStorage.getObject(book.uuid), bookJson);
-                assert.equal(JSON.stringify(book), bookJson);
+                assert.deepEqual(response, book.toJSON());
+                assert.deepEqual(localStorage.getObject(book.uuid), book.toJSON());
             }
         });
 
@@ -107,11 +109,8 @@
             remote: false,
             autoSync: false,
             success: function (model, response) {
-                console.log('response ', response);
-                console.log('bookJson ', bookJson);
-                assert.equal(response, bookJson);
-                console.log('JSON.stringify(book)', JSON.stringify(book));
-                assert.equal(JSON.stringify(book), bookJson);
+                assert.deepEqual(response, book.toJSON());
+                assert.deepEqual(localStorage.getObject(book.uuid), book.toJSON());
             }
         });
 

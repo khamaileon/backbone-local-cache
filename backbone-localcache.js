@@ -34,9 +34,6 @@
         return value && JSON.parse(value);
     };
 
-    localStorage.dirtyModels = localStorage.dirtyModels || JSON.stringify({});
-    localStorage.dirtyCollections = localStorage.dirtyCollections || JSON.stringify({});
-
     Backbone.LocalCacheModelMixin = {
 
         fetch: function (options) {
@@ -88,10 +85,10 @@
         sync: function (method, model, options) {
             // console.debug('model sync: ', method, model, options);
             var self = this,
-                data = JSON.stringify(options.attrs || model.toJSON(options)),
+                data = options.attrs || model.toJSON(options),
                 origSuccess = options.success,
                 origError = options.error,
-                dirtyModels = localStorage.getObject('dirtyModels'),
+                dirtyModels = localStorage.getObject('dirtyModels') || {},
                 lsKey;  // key of the model instance in the local storage
 
             if (self.isNew()) {
