@@ -19,17 +19,14 @@
         url: 'books'
     }).extend(Backbone.LocalCacheModelCollectionMixin);
 
-    var book = new BookModel({
-        title: 'Book title',
-        author: 'Book author'
-    });
-
-    var books = new BookCollection();
-
-    var bookJson = JSON.stringify(book);
-
     QUnit.asyncTest('collection fetch', function (assert) {
         expect(5);
+
+        var book = new BookModel({
+            title: 'Book title',
+            author: 'Book author'
+        });
+        var books = new BookCollection();
 
         // local
         books.fetch({
@@ -64,7 +61,39 @@
         QUnit.start();
     });
 
+    QUnit.asyncTest('model fetch', function (assert) {
+        expect(2);
+
+        var book = new BookModel({
+            title: 'Book title',
+            author: 'Book author'
+        });
+        var books = new BookCollection();
+
+        // remote
+        book.set({id: 4});
+        books.add(book);
+        book.fetch({
+            local: false,
+            autoSync: false,
+            success: function (model, response) {
+                console.log(model, response);
+                assert.equal(response.author, 'John Steinbeck');
+                assert.equal(book.get('author'), 'John Steinbeck');
+            },
+        });
+
+        QUnit.start();
+    });
+
     QUnit.asyncTest('local model save', function (assert) {
+        var book = new BookModel({
+            title: 'Book title',
+            author: 'Book author'
+        });
+        var books = new BookCollection();
+        var bookJson = JSON.stringify(book);
+
         book.save(null, {
             remote: false,
             autoSync: false,

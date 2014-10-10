@@ -15,7 +15,9 @@
             return _.toArray(booksAttrs);
         })
         .get("books/:id", function (context, bookId) {
-            var book = _.find(booksAttrs, function (book) { return book.id === bookId });
+            var book = _.find(booksAttrs, function (book) {
+                return book.id == bookId;
+            });
             return book || ("404 - no book found of id " + bookId);
         });
 
