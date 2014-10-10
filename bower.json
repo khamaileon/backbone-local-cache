@@ -25,6 +25,7 @@
   "devDependencies": {
     "qunit": "~1.15.0",
     "backbone-faux-server": "~0.10.4",
-    "backbone-relational": "~0.8.8"
+    "backbone-relational": "~0.8.8",
+    "jquery": "~2.1.1"
   }
 }

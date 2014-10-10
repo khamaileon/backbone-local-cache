@@ -40,7 +40,7 @@
     Backbone.LocalCacheModelMixin = {
 
         fetch: function (options) {
-            console.debug('fetch: ', options);
+            // console.debug('fetch: ', options);
             var self = this;
 
             options = _.extend({
@@ -53,7 +53,7 @@
         },
 
         save: function (key, val, options) {
-            console.debug('save: ', key, val, options);
+            // console.debug('save: ', key, val, options);
             var self = this,
                 attrs = self.attributes;
  
@@ -74,7 +74,7 @@
         },
 
         destroy: function (options) {
-            console.debug('destroy: ', options);
+            // console.debug('destroy: ', options);
             var self = this;
 
             options = _.extend({
@@ -86,7 +86,7 @@
         },
 
         sync: function (method, model, options) {
-            console.debug('model sync: ', method, model, options);
+            // console.debug('model sync: ', method, model, options);
             var self = this,
                 data = JSON.stringify(options.attrs || model.toJSON(options)),
                 origSuccess = options.success,
@@ -268,6 +268,7 @@
         },
 
         fetch: function (options) {
+            // console.debug('collection fetch: ', options);
             var self = this;
 
             options = _.extend({
@@ -279,7 +280,7 @@
         },
 
         sync: function (method, model, options) {
-            console.debug('collection  sync: ', method, model, options);
+            // console.debug('collection sync: ', method, model, options);
             var self = this,
                 origSuccess = options.success,
                 origParse = options.parse,
