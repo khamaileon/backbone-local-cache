@@ -1,5 +1,7 @@
 /*global _, Backbone, QUnit, fauxServer */
 
+// Note: with faux-server requests can be considered as synchronous
+
 (function () {
     "use strict";
 
@@ -11,7 +13,8 @@
         defaults: {
             title: 'Unknown title',
             author: 'Unknown author'
-        }
+        },
+        urlRoot: 'books'
     }).extend(Backbone.LocalCacheModelMixin);
 
     var BookCollection = Backbone.Collection.extend({
@@ -20,7 +23,7 @@
     }).extend(Backbone.LocalCacheModelCollectionMixin);
 
     QUnit.asyncTest('collection: local & remote fetch', function (assert) {
-        expect(5);
+        expect(6);
 
         var book = new BookModel({
             title: 'Book title',
@@ -59,6 +62,8 @@
             }
         });
 
+        assert.equal(books.length, 10);
+
         QUnit.start();
     });
 
@@ -69,10 +74,8 @@
             title: 'Book title',
             author: 'Book author'
         });
-        var books = new BookCollection();
 
         book.set({id: 4});
-        books.add(book);
         book.fetch({
             local: false,
             autoSync: false,
@@ -92,7 +95,6 @@
             title: 'Book title',
             author: 'Book author'
         });
-        var books = new BookCollection();
 
         book.save(null, {
             remote: false,
@@ -109,6 +111,75 @@
             success: function (model, response) {
                 assert.deepEqual(response, book.toJSON());
                 assert.deepEqual(localStorage.getObject(book.uuid), book.toJSON());
+            }
+        });
+
+        QUnit.start();
+    });
+
+    QUnit.asyncTest('model: remote update & partial update', function (assert) {
+        // expect(6);
+        var book = new BookModel({
+            title: 'Book title',
+            author: 'Book author'
+        });
+
+        book.set({id: 4});
+        book.fetch({
+            local: false,
+            autoSync: false,
+            success: function (model, response) {
+                assert.equal(response.author, 'John Steinbeck');
+                assert.equal(book.get('author'), 'John Steinbeck');
+            },
+        });
+
+        assert.equal(book.get('author'), 'John Steinbeck');
+
+        // update
+        book.set({
+            title: 'The Grapes of Wrath',
+            year: 1929
+        });
+
+        book.save(null, {
+            local: false,
+            autoSync: false,
+            success: function (model, response) {
+                assert.equal(response.title, 'The Grapes of Wrath');
+                assert.equal(response.year, '1929');
+                assert.equal(book.get('title'), 'The Grapes of Wrath');
+                assert.equal(book.get('year'), '1929');
+            }
+        });
+
+        // update bis
+        book.save({
+            year: 1939
+        }, {
+            local: false,
+            autoSync: false,
+            success: function (model, response) {
+                assert.equal(response.year, '1939');
+                assert.equal(book.get('year'), '1939');
+            }
+        });
+
+        book.set({ title: 'Of Mice and Men' });
+
+        // partial update
+        book.save({
+            year: 1937
+        }, {
+            local: false,
+            autoSync: false,
+            patch: true,
+            success: function (model, response) {
+                console.log('success');
+                assert.equal(response.title, 'The Grapes of Wrath');
+                assert.equal(response.year, '1937');
+                assert.equal(book.get('title'), 'The Grapes of Wrath');
+                assert.equal(book.get('year'), '1937');
             }
         });
 
