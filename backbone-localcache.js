@@ -42,7 +42,9 @@
         return value && JSON.parse(value);
     };
 
-    Backbone.LocalCacheModelMixin = {
+    Backbone.LocalCache = {};
+
+    Backbone.LocalCache.ModelMixin = {
         fetch: function (options) {
             var self = this;
 
@@ -135,14 +137,38 @@
                 syncSuccess = options.success,
                 syncError = options.error,
                 dirtyModels = localStorage.getObject('dirtyModels') || {},
-                storageKey = self.getLocaleStorageKey();  // key of the model instance in the local storage
+                storageKey = self.getLocaleStorageKey();
 
-            if (options.sync) {
+            // if (options.remote && !options.syncDirty) {
+            //     var dirtyModel = dirtyModels[storageKey];
+            //     if (dirtyModel) {
+            //         var deferreds = [];
+            //         _(dirtyModel).each(function (request, timestamp) {
+            //             var deferred = new $.Deferred();
+            //             deferreds.push(deferred);
+            //             options.syncDirty = true;
+            //             options.success = function () {
+            //                 deferred.resolve(timestamp);
+            //             };
+            //             self.sync(request.method, model, options);
+            //         });
 
-            }
+            //         $.when.apply($, deferreds).done(function () {
+            //             _.each(arguments, function (timestamp) {
+            //                 delete dirtyModel[timestamp];
+            //             });
+            //             if (_.isEmpty(dirtyModel)) {
+            //                 delete dirtyModels[storageKey];
+            //             }
+            //             localStorage.setObject('dirtyModels', dirtyModels);
+            //             return Backbone.Model.prototype.sync.call(self, method, model, options);
+            //         });
+            //     }
+            // }
 
             options.error = function (resp) {
-                dirtyModels[storageKey] = {
+                dirtyModels[storageKey] = dirtyModels[storageKey] || {};
+                dirtyModels[storageKey][Date.now()] = {
                     method: method,
                     data: data
                 };
@@ -172,7 +198,8 @@
 
             case 'read':
                 options.error = function (resp) {
-                    dirtyModels[storageKey] = {
+                    dirtyModels[storageKey] = dirtyModels[storageKey] || {};
+                    dirtyModels[storageKey][Date.now()] = {
                         method: method,
                         data: data
                     };
@@ -287,7 +314,7 @@
         }
     };
 
-    Backbone.LocalCacheModelCollectionMixin = {
+    Backbone.LocalCache.CollectionMixin = {
         constructor: function (attributes, options) {
             Backbone.Collection.apply(this, arguments);
 

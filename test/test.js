@@ -14,12 +14,12 @@
             author: 'Unknown author'
         },
         urlRoot: 'books'
-    }).extend(Backbone.LocalCacheModelMixin);
+    }).extend(Backbone.LocalCache.ModelMixin);
 
     var BookCollection = Backbone.Collection.extend({
         model: BookModel,
         url: 'books'
-    }).extend(Backbone.LocalCacheModelCollectionMixin);
+    }).extend(Backbone.LocalCache.CollectionMixin);
 
     QUnit.asyncTest('collection: local & remote fetch', function (assert) {
         expect(6);
@@ -30,7 +30,6 @@
         // local
         books.fetch({
             remote: false,
-            sync: false,
             success: function (model, response) {
                 assert.deepEqual(response, []);
                 assert.equal(books.length, 0);
@@ -41,7 +40,6 @@
         fauxServer.enable(false);
         books.fetch({
             local: false,
-            sync: false,
             error: function () {
                 assert.equal(books.length, 0);
             }
@@ -51,7 +49,6 @@
         fauxServer.enable(true);
         books.fetch({
             local: false,
-            sync: false,
             success: function (model, response) {
                 assert.deepEqual(response.length, 10);
                 assert.equal(books.length, 10);
@@ -74,7 +71,6 @@
 
         book.save(null, {
             remote: false,
-            sync: false,
             success: function (model, response) {
                 assert.deepEqual(response, book.toJSON());
                 assert.deepEqual(localStorage.getObject(book.uuid), book.toJSON());
@@ -83,7 +79,6 @@
 
         book.fetch({
             remote: false,
-            sync: false,
             success: function (model, response) {
                 assert.deepEqual(response, book.toJSON());
                 assert.deepEqual(localStorage.getObject(book.uuid), book.toJSON());
@@ -103,7 +98,6 @@
         book.set({id: 4});
         book.fetch({
             local: false,
-            sync: false,
             success: function (model, response) {
                 assert.equal(response.author, 'John Steinbeck');
                 assert.equal(book.get('author'), 'John Steinbeck');
@@ -120,7 +114,6 @@
 
         book.save(null, {
             local: false,
-            sync: false,
             success: function (model, response) {
                 assert.equal(response.title, 'The Grapes of Wrath');
                 assert.equal(response.year, '1929');
@@ -134,7 +127,6 @@
             year: 1939
         }, {
             local: false,
-            sync: false,
             success: function (model, response) {
                 assert.equal(response.year, '1939');
                 assert.equal(book.get('year'), '1939');
@@ -149,7 +141,6 @@
         }, {
             local: false,
             patch: true,
-            sync: false,
             success: function (model, response) {
                 assert.equal(response.title, 'The Grapes of Wrath');
                 assert.equal(response.year, '1937');
@@ -172,7 +163,6 @@
         book.fetch({
             local: false,
             cache: false,
-            sync: false,
             success: function (model, response) {
                 assert.equal(response.author, 'Ernest Hemingway');
                 assert.equal(book.get('author'), 'Ernest Hemingway');
@@ -184,7 +174,6 @@
         book.set({id: 5});
         book.fetch({
             local: false,
-            sync: false,
             success: function (model, response) {
                 assert.equal(response.author, 'Ernest Hemingway');
                 assert.equal(book.get('author'), 'Ernest Hemingway');
@@ -200,7 +189,6 @@
 
         book.save(null, {
             remote: false,
-            sync: false,
             success: function (model, response) {
                 assert.equal(response.title, 'The Grapes of Wrath');
                 assert.equal(response.year, '1929');
@@ -224,7 +212,6 @@
 
         fauxServer.enable(false);
         book.save(null, {
-            sync: false,
             success: function (model, response) {
                 assert.deepEqual(response, book.toJSON());
                 assert.deepEqual(localStorage.getObject(book.getLocaleStorageKey()), book.toJSON());
@@ -234,7 +221,6 @@
 
         fauxServer.enable(true);
         book.save(null, {
-            sync: false,
             success: function (model, response) {
                 assert.deepEqual(response, book.toJSON());
                 assert.deepEqual(localStorage.getObject(book.getLocaleStorageKey()), book.toJSON());
@@ -254,7 +240,6 @@
 
         fauxServer.enable(false);
         book.fetch({
-            sync: false,
             error: function () {
                 assert.ok(true);
             }
@@ -262,7 +247,35 @@
 
         fauxServer.enable(true);
         book.fetch({
-            sync: false,
+            success: function (model, response) {
+                assert.deepEqual(response, book.toJSON());
+                assert.deepEqual(localStorage.getObject(book.getLocaleStorageKey()), book.toJSON());
+            }
+        });
+
+        QUnit.start();
+    });
+
+    QUnit.asyncTest('model: sync dirty models', function (assert) {
+        // expect(4);
+        localStorage.clear();
+
+        var book = new BookModel({
+            title: 'Les Paradis artificiels',
+            author: 'Baudelaire'
+        });
+
+        fauxServer.enable(false);
+        book.save(null, {
+            success: function (model, response) {
+                assert.deepEqual(response, book.toJSON());
+                assert.deepEqual(localStorage.getObject(book.getLocaleStorageKey()), book.toJSON());
+            }
+        });
+
+        fauxServer.enable(true);
+        book.save({'title': "L'Art romantique"}, {
+            patch: true,
             success: function (model, response) {
                 assert.deepEqual(response, book.toJSON());
                 assert.deepEqual(localStorage.getObject(book.getLocaleStorageKey()), book.toJSON());
