@@ -1,4 +1,9 @@
+/*jslint nomen: true*/
+/*global $, define, Storage, localStorage, _*/
+
 (function (root, factory) {
+
+    "use strict";
 
     // Set up Backbone-LocalCache appropriately for the environment. Start with AMD.
     if (typeof define === 'function' && define.amd) {
@@ -17,12 +22,15 @@
 
     "use strict";
 
-    var createUuid = function () {
+    // https://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript
+    var generateUUID = function () {
+        var d = new Date().getTime();
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-            var r = Math.random()*16|0, v = c === 'x' ? r : (r&0x3|0x8);
-            return v.toString(16);
+            var r = (d + Math.random()*16)%16 | 0;
+            d = Math.floor(d/16);
+            return (c=='x' ? r : (r&0x7|0x8)).toString(16);
         });
-    }
+    };
 
     // https://stackoverflow.com/questions/2010892/storing-objects-in-html5-localstorage
     Storage.prototype.setObject = function (key, value) {
@@ -35,22 +43,32 @@
     };
 
     Backbone.LocalCacheModelMixin = {
-
         fetch: function (options) {
-            // console.debug('fetch: ', options);
             var self = this;
 
             options = _.extend({
                 local: true,
                 remote: true,
-                autoSync: true
+                cache: true,
+                sync: true
             }, options);
+
+            var fetchSuccess = options.success;
+
+            options.success = function (model, resp, options) {
+                if (options.cache) {
+                    localStorage.setObject(self.getLocaleStorageKey(), self.toJSON());
+                }
+
+                if (fetchSuccess) {
+                    fetchSuccess(model, resp, options);
+                }
+            };
 
             return Backbone.Model.prototype.fetch.call(self, options);
         },
 
         save: function (key, val, options) {
-            // console.debug('save: ', key, val, options);
             var self = this,
                 attrs = self.attributes;
  
@@ -64,131 +82,144 @@
 
             options = _.extend({
                 local: true,
-                remote: true
+                remote: true,
+                cache: true,
+                sync: true
             }, options);
+
+            var saveSuccess = options.success;
+
+            options.success = function (model, resp, options) {
+                if (options.cache) {
+                    localStorage.setObject(self.getLocaleStorageKey(), self.toJSON());
+                }
+
+                if (self.getLocaleStorageKey() !== self.uuid) {
+                    localStorage.removeItem(self.uuid);
+                }
+
+                if (saveSuccess) {
+                    saveSuccess(model, resp, options);
+                }
+            };
 
             return Backbone.Model.prototype.save.call(self, attrs, options);
         },
 
         destroy: function (options) {
-            // console.debug('destroy: ', options);
             var self = this;
 
             options = _.extend({
                 local: true,
-                remote: true
+                remote: true,
+                sync: true
             }, options);
 
             return Backbone.Model.prototype.destroy.call(self, options);
         },
 
-        sync: function (method, model, options) {
-            // console.debug('model sync: ', method, model, options);
-            var self = this,
-                data = options.attrs || model.toJSON(options),
-                origSuccess = options.success,
-                origError = options.error,
-                dirtyModels = localStorage.getObject('dirtyModels') || {},
-                lsKey;  // key of the model instance in the local storage
-
+        getLocaleStorageKey: function () {
+            var self = this;
             if (self.isNew()) {
                 if (!self.uuid) {
-                    self.uuid = createUuid();
+                    self.uuid = generateUUID();
                 }
-                lsKey = self.uuid;
-            } else {
-                lsKey = self.url();
+                return self.uuid;
+            }
+            return self.url();
+        },
+
+        sync: function (method, model, options) {
+            var self = this,
+                data = options.attrs || model.toJSON(options),
+                syncSuccess = options.success,
+                syncError = options.error,
+                dirtyModels = localStorage.getObject('dirtyModels') || {},
+                storageKey = self.getLocaleStorageKey();  // key of the model instance in the local storage
+
+            if (options.sync) {
+
             }
 
-            options.success = function (resp) {
-                // FIXME: the original success method must be call before the
-                //        model instance is being set into the local storage
-                if (origSuccess) {
-                    origSuccess(resp);
-                }
-
-                if (options.local) {
-                    localStorage.setObject(lsKey, self.toJSON());
-                }
-
-                if (lsKey === model.uuid) {
-                    localStorage[self.url()] = localStorage[model.uuid];
-                    localStorage.removeItem(model.uuid);
-                }
-            };
-
             options.error = function (resp) {
-                dirtyModels[lsKey] = {
+                dirtyModels[storageKey] = {
                     method: method,
                     data: data
                 };
                 localStorage.setObject('dirtyModels', dirtyModels);
-                if (origError) {
-                    origError(resp);
+
+                if (options.local && syncSuccess) {
+                    syncSuccess(data);
+                } else if (syncError) {
+                    syncError(resp);
                 }
             };
 
             switch (method) {
             case 'create':
                 if (options.local) {
-                    localStorage.setObject(lsKey, data);
+                    localStorage.setObject(storageKey, data);
 
-                    if (!options.remote && origSuccess) {
-                        origSuccess(data);
+                    if (!options.remote && syncSuccess) {
+                        syncSuccess(data);
                     }
                 }
+
                 if (options.remote) {
                     return Backbone.Model.prototype.sync.call(self, method, model, options);
                 }
                 break;
 
             case 'read':
+                options.error = function (resp) {
+                    dirtyModels[storageKey] = {
+                        method: method,
+                        data: data
+                    };
+                    localStorage.setObject('dirtyModels', dirtyModels);
+
+                    if (syncError) {
+                        syncError(resp);
+                    }
+                };
+
                 if (options.local) {
                     if (!self.id && !self.uuid) {
-                        if (origError) {
-                            origError();  // TODO: id error
+                        if (syncError) {
+                            syncError();  // TODO: id error
                         }
                         break;
                     }
 
                     if (!options.remote) {
-                        if (localStorage.getObject(lsKey) && origSuccess) {
-                            origSuccess(localStorage.getObject(lsKey));
-                        } else if (origError) {
-                            origError();  // TODO: 404 error response
+                        if (localStorage.getObject(storageKey) && syncSuccess) {
+                            syncSuccess(localStorage.getObject(storageKey));
+                        } else if (syncError) {
+                            syncError();  // TODO: 404 error response
                         }
                     }
                 }
                 if (options.remote) {
                     if (!self.id) {
-                        if (origError) {
-                            origError();  // TODO: id error
+                        if (syncError) {
+                            syncError();  // TODO: id error
                         }
                         break;
                     }
 
-                    if (options.autoSync && dirtyModels[lsKey]) {
-                        options.success = function () {
-                            return Backbone.Model.prototype.sync.call(self, method, model, options);
-                        };
-                        options.error = function () {
-                            origError(); // TODO: sync error
-                        };
-                        options.data = dirtyModels[lsKey].data;
-                        return self.sync(dirtyModels[lsKey].method, model, options);
-                    }
                     return Backbone.Model.prototype.sync.call(self, method, model, options);
                 }
                 break;
 
             case 'update':
                 if (options.local) {
-                    localStorage.setObject(lsKey, self.toJSON());                        
+                    localStorage.setObject(storageKey, data);
 
-                    if (!options.remote && origSuccess) {
-                        origSuccess(localStorage.getObject(lsKey));
+                    if (!options.remote && syncSuccess) {
+                        syncSuccess(data);
                     }
                 }
+
                 if (options.remote) {
                     return Backbone.Model.prototype.sync.call(self, method, model, options);
                 }
@@ -196,12 +227,13 @@
 
             case 'patch':
                 if (options.local) {
-                    localStorage.setObject(lsKey, _.extend(localStorage[lsKey], self.attrs));
+                    localStorage.setObject(storageKey, _.extend(localStorage[storageKey], self.attrs));
 
-                    if (!options.remote && origSuccess) {
-                        origSuccess(localStorage.getObject(lsKey));
+                    if (!options.remote && syncSuccess) {
+                        syncSuccess(localStorage.getObject(storageKey));
                     }
                 }
+
                 if (options.remote) {
                     return Backbone.Model.prototype.sync.call(self, method, model, options);
                 }
@@ -209,11 +241,12 @@
 
             case 'delete':
                 if (options.local) {
-                    localStorage.removeItem(lsKey);
+                    localStorage.removeItem(storageKey);
                     if (!options.remote) {
-                        origSuccess();  // TODO: 204 ?
+                        syncSuccess();  // TODO: 204 ?
                     }
                 }
+
                 if (options.remote) {
                     return Backbone.Model.prototype.sync.call(self, method, model, options);
                 }
@@ -236,7 +269,7 @@
             options = _.extend({
                 local: true,
                 remote: true,
-                autoSync: true
+                sync: true
             }, options);
 
             var origSuccess = options.success;
@@ -255,7 +288,6 @@
     };
 
     Backbone.LocalCacheModelCollectionMixin = {
-
         constructor: function (attributes, options) {
             Backbone.Collection.apply(this, arguments);
 
@@ -265,7 +297,6 @@
         },
 
         fetch: function (options) {
-            // console.debug('collection fetch: ', options);
             var self = this;
 
             options = _.extend({
@@ -277,11 +308,10 @@
         },
 
         sync: function (method, model, options) {
-            // console.debug('collection sync: ', method, model, options);
             var self = this,
                 origSuccess = options.success,
                 origParse = options.parse,
-                lsKey = self.url;  // key of the collection instance in the local storage
+                storageKey = self.url;  // key of the collection instance in the local storage
 
             switch (method) {
             case 'read':
