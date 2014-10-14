@@ -5,6 +5,8 @@
 (function () {
     "use strict";
 
+    $.ajaxSetup({ async: false });
+
     console.log('fauxServer version: ' + fauxServer.getVersion());
     localStorage.clear();
 
