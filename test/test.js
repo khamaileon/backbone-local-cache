@@ -1,7 +1,5 @@
 /*global _, Backbone, QUnit, expect, fauxServer, localStorage*/
 
-// Note: with faux-server requests can be considered as synchronous
-
 (function () {
     "use strict";
 
