@@ -256,8 +256,45 @@
         QUnit.start();
     });
 
+    QUnit.asyncTest('model: fetchOrSave', function (assert) {
+        expect(6);
+        localStorage.clear();
+
+        var book = new BookModel({
+            title: 'Les Paradis artificiels',
+            author: 'Baudelaire'
+        });
+
+        fauxServer.enable(false);
+        book.fetchOrSave(null, {
+            local: false,
+            error: function (model, response) {
+                assert.ok(true);
+            }
+        });
+
+        fauxServer.enable(true);
+        book.fetchOrSave(null, {
+            remote: false,
+            success: function (model, response) {
+                assert.deepEqual(response, book.toJSON());
+                assert.deepEqual(localStorage.getObject(book.getLocaleStorageKey()), book.toJSON());
+                assert.deepEqual(localStorage.getObject(book.uuid), book.toJSON());
+            }
+        });
+
+        book.fetchOrSave(null, {
+            success: function (model, response) {
+                assert.deepEqual(response, book.toJSON());
+                assert.deepEqual(localStorage.getObject(book.getLocaleStorageKey()), book.toJSON());
+            }
+        });
+
+        QUnit.start();
+    });
+
     QUnit.asyncTest('model: sync dirty models', function (assert) {
-        // expect(4);
+        expect(4);
         localStorage.clear();
 
         var book = new BookModel({
