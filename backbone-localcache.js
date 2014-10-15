@@ -1,4 +1,5 @@
-/*jslint nomen: true*/
+/*jslint node: true, stupid: true*/
+/*jslint node: false*/
 /*global $, define, Storage, localStorage, _*/
 
 (function (root, factory) {
@@ -52,7 +53,7 @@
                 local: true,
                 remote: true,
                 cache: true,
-                sync: true
+                autoSync: true
             }, options);
 
             var fetchSuccess = options.success;
@@ -86,7 +87,7 @@
                 local: true,
                 remote: true,
                 cache: true,
-                sync: true
+                autoSync: true
             }, options);
 
             var saveSuccess = options.success;
@@ -114,7 +115,7 @@
             options = _.extend({
                 local: true,
                 remote: true,
-                sync: true
+                autoSync: true
             }, options);
 
             return Backbone.Model.prototype.destroy.call(self, options);
@@ -139,32 +140,38 @@
                 dirtyModels = localStorage.getObject('dirtyModels') || {},
                 storageKey = self.getLocaleStorageKey();
 
-            // if (options.remote && !options.syncDirty) {
-            //     var dirtyModel = dirtyModels[storageKey];
-            //     if (dirtyModel) {
-            //         var deferreds = [];
-            //         _(dirtyModel).each(function (request, timestamp) {
-            //             var deferred = new $.Deferred();
-            //             deferreds.push(deferred);
-            //             options.syncDirty = true;
-            //             options.success = function () {
-            //                 deferred.resolve(timestamp);
-            //             };
-            //             self.sync(request.method, model, options);
-            //         });
+            if (options.local && options.remote && options.autoSync) {
+                var dirtyModel = dirtyModels[storageKey];
+                if (dirtyModel) {
+                    var deferreds = [];
+                    _(dirtyModel).each(function (request, timestamp) {
+                        var deferred = new $.Deferred();
+                        deferreds.push(deferred);
+                        options.autoSync = false;
+                        options.success = function () {
+                            deferred.resolve(timestamp);
+                        };
+                        options.error = function () {
+                            deferred.reject(timestamp);
+                        };
+                        self.sync(request.method, model, options);
+                    });
 
-            //         $.when.apply($, deferreds).done(function () {
-            //             _.each(arguments, function (timestamp) {
-            //                 delete dirtyModel[timestamp];
-            //             });
-            //             if (_.isEmpty(dirtyModel)) {
-            //                 delete dirtyModels[storageKey];
-            //             }
-            //             localStorage.setObject('dirtyModels', dirtyModels);
-            //             return Backbone.Model.prototype.sync.call(self, method, model, options);
-            //         });
-            //     }
-            // }
+                    $.when.apply($, deferreds).done(function () {
+                        _.each(arguments, function (timestamp) {
+                            delete dirtyModel[timestamp];
+                        });
+                        if (_.isEmpty(dirtyModel)) {
+                            delete dirtyModels[storageKey];
+                        }
+                        localStorage.setObject('dirtyModels', dirtyModels);
+                        options.success = syncSuccess;
+                        options.error = syncError;
+                        return Backbone.Model.prototype.sync.call(self, method, model, options);
+                    });
+                    return;
+                }
+            }
 
             options.error = function (resp) {
                 dirtyModels[storageKey] = dirtyModels[storageKey] || {};
@@ -296,21 +303,17 @@
             options = _.extend({
                 local: true,
                 remote: true,
-                sync: true
+                autoSync: true
             }, options);
 
-            var origSuccess = options.success;
+            var fetchOrSaveError = options.error;
 
-            self.fetch({
-                success: function (model, resp, options) {
-                    if (origSuccess) {
-                        origSuccess(model, resp, options);
-                    }
-                },
-                error: function () {
-                    self.save(attrs, options);
-                }
-            });
+            options.error = function () {
+                options.error = fetchOrSaveError;
+                self.save(attrs, options);
+            };
+
+            return self.fetch(options);
         }
     };
 

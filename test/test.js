@@ -1,4 +1,4 @@
-/*global _, Backbone, QUnit, expect, fauxServer, localStorage*/
+/*global $, _, Backbone, QUnit, expect, fauxServer, localStorage*/
 
 (function () {
     "use strict";
@@ -276,6 +276,7 @@
         fauxServer.enable(true);
         book.fetchOrSave(null, {
             remote: false,
+            autoSync: false,
             success: function (model, response) {
                 assert.deepEqual(response, book.toJSON());
                 assert.deepEqual(localStorage.getObject(book.getLocaleStorageKey()), book.toJSON());
@@ -284,6 +285,7 @@
         });
 
         book.fetchOrSave(null, {
+            autoSync: false,
             success: function (model, response) {
                 assert.deepEqual(response, book.toJSON());
                 assert.deepEqual(localStorage.getObject(book.getLocaleStorageKey()), book.toJSON());
@@ -294,7 +296,7 @@
     });
 
     QUnit.asyncTest('model: sync dirty models', function (assert) {
-        expect(4);
+        expect(6);
         localStorage.clear();
 
         var book = new BookModel({
@@ -307,6 +309,8 @@
             success: function (model, response) {
                 assert.deepEqual(response, book.toJSON());
                 assert.deepEqual(localStorage.getObject(book.getLocaleStorageKey()), book.toJSON());
+                var dirtyModels = localStorage.getObject('dirtyModels');
+                assert.equal(_.size(dirtyModels), 1);
             }
         });
 
@@ -316,6 +320,8 @@
             success: function (model, response) {
                 assert.deepEqual(response, book.toJSON());
                 assert.deepEqual(localStorage.getObject(book.getLocaleStorageKey()), book.toJSON());
+                var dirtyModels = localStorage.getObject('dirtyModels');
+                assert.equal(_.size(dirtyModels), 0);
             }
         });
 
