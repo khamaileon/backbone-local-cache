@@ -1,5 +1,3 @@
-/*jslint node: true, stupid: true*/
-/*jslint node: false*/
 /*global $, define, Storage, localStorage, _*/
 
 (function (root, factory) {
@@ -97,8 +95,8 @@
                     localStorage.setObject(self.getLocaleStorageKey(), self.toJSON());
                 }
 
-                if (self.getLocaleStorageKey() !== self.uuid) {
-                    localStorage.removeItem(self.uuid);
+                if (self.getLocaleStorageKey() !== self.storageKey) {
+                    localStorage.removeItem(self.storageKey);
                 }
 
                 if (saveSuccess) {
@@ -124,10 +122,10 @@
         getLocaleStorageKey: function () {
             var self = this;
             if (self.isNew()) {
-                if (!self.uuid) {
-                    self.uuid = generateUUID();
+                if (!self.storageKey) {
+                    self.storageKey = generateUUID();
                 }
-                return self.uuid;
+                return self.storageKey;
             }
             return self.url();
         },
@@ -139,6 +137,10 @@
                 syncError = options.error,
                 dirtyModels = localStorage.getObject('dirtyModels') || {},
                 storageKey = self.getLocaleStorageKey();
+
+            if (options.local) {
+                options.storageKey = storageKey;
+            }
 
             if (options.local && options.remote && options.autoSync) {
                 var dirtyModel = dirtyModels[storageKey];
@@ -218,7 +220,7 @@
                 };
 
                 if (options.local) {
-                    if (!self.id && !self.uuid) {
+                    if (!self.id && !self.storageKey) {
                         if (syncError) {
                             syncError();  // TODO: id error
                         }
@@ -341,7 +343,7 @@
             var self = this,
                 origSuccess = options.success,
                 origParse = options.parse,
-                storageKey = self.url;  // key of the collection instance in the local storage
+                storageKey = self.url;
 
             switch (method) {
             case 'read':

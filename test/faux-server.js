@@ -72,33 +72,71 @@
         }
     };
 
+    var users = {};
+    var cards = {};
+
     fauxServer
-        .get('books', function () {
+        // Books
+        .get('book', function () {
             return _.toArray(books);
         })
 
-        .get('books/:id', function (context, bookId) {
+        .get('book/:id', function (context, bookId) {
             return books[bookId] || ('404 - no book found of id ' + bookId);
         })
 
-        .post('books', function (context) {
-            var maxIdBook = _.max(books, function (book) { return book.id; }),
-                id = maxIdBook.id + 1;
+        .post('book', function (context) {
+            var id = 1;
+            if (!_.isEmpty(books)) {
+                var maxId = _.max(books, function (book) { return book.id; });
+                id = maxId.id + 1;
+            }
             books[id] = context.data;
             books[id].id = id;
             return books[id];
         })
 
-        .put('books/:id', function (context, bookId) {
+        .put('book/:id', function (context, bookId) {
             if (!books[bookId]) { return ('404 - no book found of id ' + bookId); }
             books[bookId] = context.data;
             return books[bookId];
         })
 
-        .patch('books/:id', function (context, bookId) {
+        .patch('book/:id', function (context, bookId) {
             if (!books[bookId]) { return ('404 - no book found of id ' + bookId); }
             _(books[bookId]).extend(context.data);
             return books[bookId];
-        });
+        })
 
+        // Users
+        .get('user/:id', function (context, userId) {
+            return users[userId] || ('404 - no user found of id ' + userId);
+        })
+
+        .post('user', function (context) {
+            var id = 1;
+            if (!_.isEmpty(users)) {
+                var maxId = _.max(users, function (user) { return user.id; });
+                id = maxId.id + 1;
+            }
+            users[id] = context.data;
+            users[id].id = id;
+            return users[id];
+        })
+
+        // Library cards
+        .get('card/:id', function (context, cardId) {
+            return cards[cardId] || ('404 - no card found of id ' + cardId);
+        })
+
+        .post('card', function (context) {
+            var id = 1;
+            if (!_.isEmpty(cards)) {
+                var maxId = _.max(cards, function (card) { return card.id; });
+                id = maxId.id + 1;
+            }
+            cards[id] = context.data;
+            cards[id].id = id;
+            return cards[id];
+        });
 }());
