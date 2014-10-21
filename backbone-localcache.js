@@ -320,40 +320,54 @@
     };
 
     Backbone.LocalCache.CollectionMixin = {
-        constructor: function (attributes, options) {
-            Backbone.Collection.apply(this, arguments);
-
-            this.on('add remove', function (eventName) {
-                localStorage.setObject(this.url, this.toJSON());
-            });
-        },
-
         fetch: function (options) {
             var self = this;
 
             options = _.extend({
                 local: true,
-                remote: true
+                remote: true,
+                cache: true
             }, options);
+
+            var fetchSuccess = options.success;
+
+            options.success = function (collection, resp, options) {
+                if (options.cache) {
+                    collection.each(function (model) {
+                        model.save({remote: false});
+                    });
+                    var storageKeys = self.map(function (model) {
+                        return model.getLocaleStorageKey();
+                    });
+                    localStorage.setObject(self.url, storageKeys);
+                }
+
+                if (fetchSuccess) {
+                    fetchSuccess(collection, resp, options);
+                }
+            };
 
             return Backbone.Collection.prototype.fetch.call(self, options);
         },
 
-        sync: function (method, model, options) {
+        sync: function (method, collection, options) {
             var self = this,
-                origSuccess = options.success,
-                origParse = options.parse,
-                storageKey = self.url;
+                syncSuccess = options.success,
+                syncParse = options.parse;
 
             switch (method) {
             case 'read':
                 if (options.local) {
                     options.parse = false;
-                    origSuccess(model.models);
+                    var storageKeys = localStorage.getObject(self.url);
+                    var models = _.map(storageKeys, function (storageKey) {
+                        return localStorage.getObject(storageKey);
+                    });
+                    syncSuccess(models);
                 }
                 if (options.remote) {
-                    options.parse = origParse;
-                    return Backbone.Collection.prototype.sync.call(self, method, model, options);
+                    options.parse = syncParse;
+                    return Backbone.Collection.prototype.sync.call(self, method, collection, options);
                 }
                 break;
             }

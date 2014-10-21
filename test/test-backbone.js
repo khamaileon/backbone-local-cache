@@ -21,8 +21,8 @@
         url: 'book'
     }).extend(Backbone.LocalCache.CollectionMixin);
 
-    QUnit.asyncTest('collection: local & remote fetch', function (assert) {
-        expect(6);
+    QUnit.asyncTest('collection: local & remote fetch + save', function (assert) {
+        expect(8);
         localStorage.clear();
 
         var books = new BookCollection();
@@ -30,7 +30,7 @@
         // local
         books.fetch({
             remote: false,
-            success: function (model, resp, options) {
+            success: function (collection, resp) {
                 assert.deepEqual(resp, []);
                 assert.equal(books.length, 0);
             }
@@ -49,13 +49,30 @@
         fauxServer.enable(true);
         books.fetch({
             local: false,
-            success: function (model, resp) {
+            success: function (collection, resp) {
                 assert.deepEqual(resp.length, 10);
                 assert.equal(books.length, 10);
             }
         });
 
-        assert.equal(books.length, 10);
+        books.fetch({
+            remote: false,
+            success: function (collection) {
+                var storageKeys = collection.map(function (model) {
+                    return model.getLocaleStorageKey();
+                });
+                assert.deepEqual(localStorage.getObject(collection.url), storageKeys);
+            }
+        });
+
+        var book = books.get({id: 2});
+        assert.deepEqual(localStorage.getObject(book.getLocaleStorageKey()), book.toJSON());
+        book.destroy({
+            remote: false,
+            success: function (model) {
+                assert.ok(!_.has(localStorage, model.getLocaleStorageKey()));
+            }
+        });
 
         QUnit.start();
     });
@@ -117,7 +134,6 @@
         book.save(null, {
             local: false,
             success: function (model, resp, options) {
-                console.dir(options);
                 assert.ok(!_.has(options, 'storageKey'));
                 assert.equal(resp.title, 'The Grapes of Wrath');
                 assert.equal(resp.year, '1929');
