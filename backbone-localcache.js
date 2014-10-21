@@ -66,7 +66,7 @@
                 }
             };
 
-            return Backbone.Model.prototype.fetch.call(self, options);
+            return self._super(options);
         },
 
         save: function (key, val, options) {
@@ -104,7 +104,7 @@
                 }
             };
 
-            return Backbone.Model.prototype.save.call(self, attrs, options);
+            return self._super(attrs, options);
         },
 
         destroy: function (options) {
@@ -116,7 +116,7 @@
                 autoSync: true
             }, options);
 
-            return Backbone.Model.prototype.destroy.call(self, options);
+            return self._super(options);
         },
 
         getLocaleStorageKey: function () {
@@ -169,7 +169,7 @@
                         localStorage.setObject('dirtyModels', dirtyModels);
                         options.success = syncSuccess;
                         options.error = syncError;
-                        return Backbone.Model.prototype.sync.call(self, method, model, options);
+                        return self._super(method, model, options);
                     });
                     return;
                 }
@@ -201,7 +201,7 @@
                 }
 
                 if (options.remote) {
-                    return Backbone.Model.prototype.sync.call(self, method, model, options);
+                    return self._super(method, model, options);
                 }
                 break;
 
@@ -243,7 +243,7 @@
                         break;
                     }
 
-                    return Backbone.Model.prototype.sync.call(self, method, model, options);
+                    return self._super(method, model, options);
                 }
                 break;
 
@@ -257,7 +257,7 @@
                 }
 
                 if (options.remote) {
-                    return Backbone.Model.prototype.sync.call(self, method, model, options);
+                    return self._super(method, model, options);
                 }
                 break;
 
@@ -271,7 +271,7 @@
                 }
 
                 if (options.remote) {
-                    return Backbone.Model.prototype.sync.call(self, method, model, options);
+                    return self._super(method, model, options);
                 }
                 break;
 
@@ -284,7 +284,7 @@
                 }
 
                 if (options.remote) {
-                    return Backbone.Model.prototype.sync.call(self, method, model, options);
+                    return self._super(method, model, options);
                 }
                 break;
             }
@@ -347,7 +347,7 @@
                 }
             };
 
-            return Backbone.Collection.prototype.fetch.call(self, options);
+            return self._super(options);
         },
 
         sync: function (method, collection, options) {
@@ -367,7 +367,7 @@
                 }
                 if (options.remote) {
                     options.parse = syncParse;
-                    return Backbone.Collection.prototype.sync.call(self, method, collection, options);
+                    return self._super(method, collection, options);
                 }
                 break;
             }
