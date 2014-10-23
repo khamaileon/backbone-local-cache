@@ -334,7 +334,7 @@
             options.success = function (collection, resp, options) {
                 if (options.cache) {
                     collection.each(function (model) {
-                        model.save({remote: false});
+                        model.save(null, {remote: false});
                     });
                     var storageKeys = self.map(function (model) {
                         return model.getLocaleStorageKey();
