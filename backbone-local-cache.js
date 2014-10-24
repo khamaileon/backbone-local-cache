@@ -1,35 +1,28 @@
-/*global $, define, Storage, localStorage, _*/
-
-(function (root, factory) {
-
-    "use strict";
-
-    // Set up Backbone-LocalCache appropriately for the environment. Start with AMD.
+(function (root, factory) { 'use strict';
+    // AMD.
     if (typeof define === 'function' && define.amd) {
         define(['exports', 'backbone', 'underscore'], factory);
 
-    // Next for Node.js or CommonJS.
+    // CommonJS.
     } else if (typeof exports !== 'undefined') {
         factory(exports, require('backbone'), require('underscore'));
 
-    // Finally, as a browser global.
+    // Global.
     } else {
         factory(root, root.Backbone, root._);
     }
 
-}(this, function (exports, Backbone, _) {
-
-    "use strict";
+}(this, function (exports, Backbone, _) { 'use strict';
 
     // https://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript
-    var generateUUID = function () {
+    function generateUUID() {
         var d = new Date().getTime();
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
             var r = (d + Math.random()*16)%16 | 0;
             d = Math.floor(d/16);
-            return (c=='x' ? r : (r&0x7|0x8)).toString(16);
+            return (c === 'x' ? r : (r&0x7|0x8)).toString(16);
         });
-    };
+    }
 
     // https://stackoverflow.com/questions/2010892/storing-objects-in-html5-localstorage
     Storage.prototype.setObject = function (key, value) {
@@ -72,7 +65,7 @@
         save: function (key, val, options) {
             var self = this,
                 attrs = self.attributes;
- 
+
             // Handle both `"key", value` and `{key: value}` -style arguments.
             if (key == null || typeof key === 'object') {
                 attrs = key;
@@ -293,7 +286,7 @@
         fetchOrSave: function (key, val, options) {
             var self = this,
                 attrs = self.attributes;
- 
+
             // Handle both `"key", value` and `{key: value}` -style arguments.
             if (key == null || typeof key === 'object') {
                 attrs = key;

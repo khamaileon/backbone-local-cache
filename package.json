@@ -1,17 +1,15 @@
 {
   "name": "backbone-localcache",
-  "version": "0.1.0",
-  "description": "",
-  "main": "backbone-localcache.js",
-  "devDependencies": {
-    "bower": "~1.3.12"
-  },
+  "version": "0.0.0",
+  "description": "Add offline mode support for Backbone.",
+  "main": "backbone-local-cache.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "install": "bower install",
+    "test": "./node_modules/karma/bin/karma start --single-run"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/khamaileon/backbone-localcache.git"
+    "url": "https://github.com/khamaileon/backbone-local-cache.git"
   },
   "keywords": [
     "backbone",
@@ -20,8 +18,16 @@
     "storage"
   ],
   "author": "khamaileon",
-  "license": "MIT License",
+  "license": "MIT",
   "bugs": {
-    "url": "https://github.com/khamaileon/backbone-localcache/issues"
+    "url": "https://github.com/khamaileon/backbone-local-cache/issues"
+  },
+  "homepage": "https://github.com/khamaileon/backbone-local-cache",
+  "devDependencies": {
+    "karma": "^0.12.24",
+    "karma-chrome-launcher": "^0.1.5",
+    "karma-firefox-launcher": "^0.1.3",
+    "karma-qunit": "^0.1.4",
+    "qunitjs": "^1.15.0"
   }
 }
