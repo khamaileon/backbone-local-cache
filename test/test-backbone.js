@@ -14,12 +14,12 @@
             author: 'Unknown author'
         },
         urlRoot: 'book'
-    }).extend(Backbone.LocalCache.ModelMixin);
+    }).extend(Backbone.LocalCache.Model).extend({_parent: Backbone.Model});
 
     var BookCollection = Backbone.Collection.extend({
         model: BookModel,
         url: 'book'
-    }).extend(Backbone.LocalCache.CollectionMixin);
+    }).extend(Backbone.LocalCache.Collection).extend({_parent: Backbone.Model});
 
     QUnit.asyncTest('collection: local & remote fetch + save', function (assert) {
         expect(8);

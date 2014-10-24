@@ -36,7 +36,12 @@
 
     Backbone.LocalCache = {};
 
-    Backbone.LocalCache.ModelMixin = {
+    Backbone.LocalCache.Model = {
+        mixin: function (Model) {
+            this._parent = Model;
+            return Model.extend(Backbone.LocalCache.Model);
+        },
+
         fetch: function (options) {
             var self = this;
 
@@ -59,7 +64,7 @@
                 }
             };
 
-            return self._super(options);
+            return self._parent.prototype.fetch.call(self, options);
         },
 
         save: function (key, val, options) {
@@ -97,7 +102,7 @@
                 }
             };
 
-            return self._super(attrs, options);
+            return self._parent.prototype.save.call(self, attrs, options);
         },
 
         destroy: function (options) {
@@ -109,7 +114,7 @@
                 autoSync: true
             }, options);
 
-            return self._super(options);
+            return self._parent.prototype.destroy.call(self, options);
         },
 
         getLocaleStorageKey: function () {
@@ -149,7 +154,7 @@
                         options.error = function () {
                             deferred.reject(timestamp);
                         };
-                        self.sync(request.method, model, options);
+                        self._parent.prototype.sync.call(self, request.method, model, options);
                     });
 
                     $.when.apply($, deferreds).done(function () {
@@ -162,7 +167,7 @@
                         localStorage.setObject('dirtyModels', dirtyModels);
                         options.success = syncSuccess;
                         options.error = syncError;
-                        return self._super(method, model, options);
+                        return self._parent.prototype.sync.call(self, method, model, options);
                     });
                     return;
                 }
@@ -194,7 +199,7 @@
                 }
 
                 if (options.remote) {
-                    return self._super(method, model, options);
+                    return self._parent.prototype.sync.call(self, method, model, options);
                 }
                 break;
 
@@ -236,7 +241,7 @@
                         break;
                     }
 
-                    return self._super(method, model, options);
+                    return self._parent.prototype.sync.call(self, method, model, options);
                 }
                 break;
 
@@ -250,7 +255,7 @@
                 }
 
                 if (options.remote) {
-                    return self._super(method, model, options);
+                    return self._parent.prototype.sync.call(self, method, model, options);
                 }
                 break;
 
@@ -264,7 +269,7 @@
                 }
 
                 if (options.remote) {
-                    return self._super(method, model, options);
+                    return self._parent.prototype.sync.call(self, method, model, options);
                 }
                 break;
 
@@ -277,7 +282,7 @@
                 }
 
                 if (options.remote) {
-                    return self._super(method, model, options);
+                    return self._parent.prototype.sync.call(self, method, model, options);
                 }
                 break;
             }
@@ -312,7 +317,11 @@
         }
     };
 
-    Backbone.LocalCache.CollectionMixin = {
+    Backbone.LocalCache.Collection = {
+        mixin: function (Collection) {
+            this._parent = Collection;
+            return Collection.extend(Backbone.LocalCache.Collection);
+        },
         fetch: function (options) {
             var self = this;
 
@@ -340,7 +349,7 @@
                 }
             };
 
-            return self._super(options);
+            return self._parent.prototype.fetch.call(self, options);
         },
 
         sync: function (method, collection, options) {
@@ -360,7 +369,7 @@
                 }
                 if (options.remote) {
                     options.parse = syncParse;
-                    return self._super(method, collection, options);
+                    return self._parent.prototype.sync.call(self, method, collection, options);
                 }
                 break;
             }
