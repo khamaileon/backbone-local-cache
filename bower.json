@@ -1,8 +1,9 @@
 {
-  "name": "backbone-localcache",
-  "main": "backbone-localcache.js",
-  "version": "0.1.0",
-  "homepage": "https://github.com/khamaileon/backbone-localcache",
+  "name": "backbone-local-cache",
+  "main": "backbone-local-cache.js",
+  "version": "0.0.0",
+  "description": "Add offline mode support for Backbone.",
+  "homepage": "https://github.com/khamaileon/backbone-local-cache",
   "keywords": [
     "backbone",
     "cache",
