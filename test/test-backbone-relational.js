@@ -8,22 +8,22 @@
     console.log('fauxServer version: ' + fauxServer.getVersion());
     localStorage.clear();
 
-    var BookModel = Backbone.RelationalModel.extend({
+    var BookModel = Backbone.LocalCache.Model.mixin(Backbone.RelationalModel).extend({
         defaults: {
             title: 'Unknown title',
             author: 'Unknown author'
         },
         urlRoot: 'book'
-    }).extend(Backbone.LocalCache.ModelMixin);
+    });
 
-    var LibraryCardModel = Backbone.RelationalModel.extend({
+    var LibraryCardModel = Backbone.LocalCache.Model.mixin(Backbone.RelationalModel).extend({
         defaults: {
             number: 'Unknown number',
         },
         urlRoot: 'card'
-    }).extend(Backbone.LocalCache.ModelMixin);
+    });
 
-    var UserModel = Backbone.RelationalModel.extend({
+    var UserModel = Backbone.LocalCache.Model.mixin(Backbone.RelationalModel).extend({
         relations: [{
             type: Backbone.HasOne,
             key: 'card',
@@ -38,7 +38,7 @@
             lastName: 'Unknown last name'
         },
         urlRoot: 'user'
-    }).extend(Backbone.LocalCache.ModelMixin);
+    });
 
     QUnit.asyncTest('', function (assert) {
         // expect(0);

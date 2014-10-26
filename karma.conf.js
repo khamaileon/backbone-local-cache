@@ -11,7 +11,6 @@ module.exports = function (config) {
       'bower_components/backbone/backbone.js',
       'bower_components/backbone-faux-server/backbone-faux-server.js',
       'bower_components/backbone-relational/backbone-relational.js',
-      'bower_components/backbone-super/backbone-super/backbone-super.js',
 
       'backbone-local-cache.js',
       'test/*.js'
