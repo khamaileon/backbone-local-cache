@@ -149,40 +149,63 @@
                         deferreds.push(deferred);
                         options.autoSync = false;
                         options.success = function () {
+                            delete dirtyModel[timestamp];
                             deferred.resolve(timestamp);
                         };
-                        options.error = function () {
-                            deferred.reject(timestamp);
+                        options.error = function (resp) {
+                            if (resp.status) {
+                                delete dirtyModel[timestamp];
+                                deferred.resolve(timestamp);
+                            } else {
+                                deferred.reject();
+                            }
                         };
-                        self._parent.prototype.sync.call(self, request.method, model, options);
+                        self._parent.prototype.sync.call(self, request.method,
+                            model.clone().clear().set(request.data), options);
                     });
 
-                    $.when.apply($, deferreds).done(function () {
-                        _.each(arguments, function (timestamp) {
-                            delete dirtyModel[timestamp];
+                    $.when.apply($, deferreds)
+                        .done(function () {
+                            if (_.isEmpty(dirtyModel)) {
+                                delete dirtyModels[storageKey];
+                            }
+                            localStorage.setObject('dirtyModels', dirtyModels);
+
+                            options.success = syncSuccess;
+                            options.error = syncError;
+                            return self.sync(method, model, options);
+                        })
+                        .fail(function () {
+                            dirtyModels[storageKey][Date.now()] = {
+                                method: method,
+                                data: data
+                            };
+                            localStorage.setObject('dirtyModels', dirtyModels);
+
+                            if (options.local && syncSuccess) {
+                                syncSuccess(data);
+                            } else if (syncError) {
+                                syncError(resp);
+                            }
                         });
-                        if (_.isEmpty(dirtyModel)) {
-                            delete dirtyModels[storageKey];
-                        }
-                        localStorage.setObject('dirtyModels', dirtyModels);
-                        options.success = syncSuccess;
-                        options.error = syncError;
-                        return self._parent.prototype.sync.call(self, method, model, options);
-                    });
                     return;
                 }
             }
 
-            options.error = function (resp) {
-                dirtyModels[storageKey] = dirtyModels[storageKey] || {};
-                dirtyModels[storageKey][Date.now()] = {
-                    method: method,
-                    data: data
-                };
-                localStorage.setObject('dirtyModels', dirtyModels);
+            options.error = function (resp, foo, bar) {
+                if (!resp.status) {
+                    dirtyModels[storageKey] = dirtyModels[storageKey] || {};
+                    dirtyModels[storageKey][Date.now()] = {
+                        method: method,
+                        data: data
+                    };
+                    localStorage.setObject('dirtyModels', dirtyModels);
 
-                if (options.local && syncSuccess) {
-                    syncSuccess(data);
+                    if (options.local && syncSuccess) {
+                        syncSuccess(data);
+                    } else if (syncError) {
+                        syncError(resp);
+                    }
                 } else if (syncError) {
                     syncError(resp);
                 }
