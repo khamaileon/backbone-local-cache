@@ -4,6 +4,12 @@
 
 Add offline mode support for Backbone.
 
+## Install
+
+```js
+bower install backbone-local-cache
+```
+
 ## License
 
 MIT
