@@ -5,28 +5,35 @@
 
     $.ajaxSetup({ async: false });
 
-    console.log('fauxServer version: ' + fauxServer.getVersion());
+    function reset() {
+      $.get('http://localhost:3000/reset');
+    }
+
+    function serverStatus(status) {
+      $.post('http://localhost:3000/status', {status: status});
+    }
+
     localStorage.clear();
 
-    fauxServer.init();
+    reset();
 
     var BookModel = Backbone.LocalCache.Model.mixin(Backbone.Model).extend({
         defaults: {
             title: 'Unknown title',
             author: 'Unknown author'
         },
-        urlRoot: 'book'
+        urlRoot: 'http://localhost:3000/book'
     });
 
     var BookCollection = Backbone.LocalCache.Collection.mixin(Backbone.Collection).extend({
         model: BookModel,
-        url: 'book'
+        url: 'http://localhost:3000/book'
     });
 
     QUnit.asyncTest('collection: local & remote fetch + save', function (assert) {
         // expect(8);
         localStorage.clear();
-        fauxServer.init();
+        reset();
 
         var books = new BookCollection();
 
@@ -40,7 +47,7 @@
         });
 
         // remote + server down
-        fauxServer.enable(false);
+        serverStatus('down');
         books.fetch({
             local: false,
             error: function () {
@@ -49,7 +56,7 @@
         });
 
         // remote + server up
-        fauxServer.enable(true);
+        serverStatus('up');
         books.fetch({
             local: false,
             success: function (collection, resp) {
@@ -83,7 +90,7 @@
     QUnit.asyncTest('model: local save & fetch', function (assert) {
         expect(6);
         localStorage.clear();
-        fauxServer.init();
+        reset();
 
         var book = new BookModel({
             title: 'Les Fleurs du mal',
@@ -114,7 +121,7 @@
     QUnit.asyncTest('model: remote update + partial', function (assert) {
         expect(14);
         localStorage.clear();
-        fauxServer.init();
+        reset();
 
         var book = new BookModel();
 
@@ -180,7 +187,7 @@
     QUnit.asyncTest('model: local update + partial', function (assert) {
         expect(13);
         localStorage.clear();
-        fauxServer.init();
+        reset();
 
         var book = new BookModel();
 
@@ -232,7 +239,7 @@
     QUnit.asyncTest('model: local + remote error', function (assert) {
         expect(3);
         localStorage.clear();
-        fauxServer.init();
+        reset();
 
         var book = new BookModel({
             title: 'Les Fleurs du mal',
@@ -263,14 +270,14 @@
     QUnit.asyncTest('model: local & remote save', function (assert) {
         expect(6);
         localStorage.clear();
-        fauxServer.init();
+        reset();
 
         var book = new BookModel({
             title: 'Les Fleurs du mal',
             author: 'Baudelaire'
         });
 
-        fauxServer.enable(false);
+        serverStatus('down');
         book.save(null, {
             success: function (model, resp) {
                 assert.deepEqual(resp, book.toJSON());
@@ -279,7 +286,7 @@
             }
         });
 
-        fauxServer.enable(true);
+        serverStatus('up');
         book.save(null, {
             autoSync: false,
             success: function (model, resp) {
@@ -295,19 +302,19 @@
     QUnit.asyncTest('model: local & remote fetch', function (assert) {
         expect(3);
         localStorage.clear();
-        fauxServer.init();
+        reset();
 
         var book = new BookModel();
         book.set({id: 9});
 
-        fauxServer.enable(false);
+        serverStatus('down');
         book.fetch({
             error: function () {
                 assert.ok(true);
             }
         });
 
-        fauxServer.enable(true);
+        serverStatus('up');
         book.fetch({
             success: function (model, resp) {
                 assert.deepEqual(resp, book.toJSON());
@@ -321,14 +328,14 @@
     QUnit.asyncTest('model: fetchOrSave', function (assert) {
         expect(6);
         localStorage.clear();
-        fauxServer.init();
+        reset();
 
         var book = new BookModel({
             title: 'Les Paradis artificiels',
             author: 'Baudelaire'
         });
 
-        fauxServer.enable(false);
+        serverStatus('down');
         book.fetchOrSave(null, {
             local: false,
             error: function (model, resp) {
@@ -336,7 +343,7 @@
             }
         });
 
-        fauxServer.enable(true);
+        serverStatus('up');
         book.fetchOrSave(null, {
             remote: false,
             autoSync: false,
@@ -361,14 +368,14 @@
     QUnit.asyncTest('model: sync dirty models', function (assert) {
         expect(11);
         localStorage.clear();
-        fauxServer.init();
+        reset();
 
         var book = new BookModel({
             title: 'Les Paradis artificiels',
             author: 'Baudelaire'
         });
 
-        fauxServer.enable(false);
+        serverStatus('down');
         book.save(null, {
             success: function (model, resp) {
                 var storageKey = book.getLocaleStorageKey();
@@ -391,7 +398,7 @@
             }
         });
 
-        fauxServer.enable(true);
+        serverStatus('up');
         book.save({'title': "L'Art romantique"}, {
             patch: true,
             success: function (model, resp) {
