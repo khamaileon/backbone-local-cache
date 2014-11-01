@@ -5,7 +5,6 @@
 
     $.ajaxSetup({ async: false });
 
-    console.log('fauxServer version: ' + fauxServer.getVersion());
     localStorage.clear();
 
     var BookModel = Backbone.LocalCache.Model.mixin(Backbone.RelationalModel).extend({
@@ -13,14 +12,14 @@
             title: 'Unknown title',
             author: 'Unknown author'
         },
-        urlRoot: 'book'
+        urlRoot: 'http://localhost:3000/book'
     });
 
     var LibraryCardModel = Backbone.LocalCache.Model.mixin(Backbone.RelationalModel).extend({
         defaults: {
             number: 'Unknown number',
         },
-        urlRoot: 'card'
+        urlRoot: 'http://localhost:3000/card'
     });
 
     var UserModel = Backbone.LocalCache.Model.mixin(Backbone.RelationalModel).extend({
@@ -37,7 +36,7 @@
             firstName: 'Unknown first name',
             lastName: 'Unknown last name'
         },
-        urlRoot: 'user'
+        urlRoot: 'http://localhost:3000/user'
     });
 
     QUnit.asyncTest('', function (assert) {
