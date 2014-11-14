@@ -2,6 +2,7 @@ var app = require('express')();
 var _ = require('lodash');
 var http = require('http').Server(app);
 var bodyParser = require('body-parser');
+var cors = require('cors');
 
 var books, users, cards;
 
@@ -75,14 +76,11 @@ function reset() {
 
 var serverStatus = 'up';
 
-// CORS
-app.use(function (req, res, next) {
-  res.header('Access-Control-Allow-Origin', '*');
-  next();
-});
-
 // Body parser.
-app.use(bodyParser.urlencoded({extended: true}));
+app.use(bodyParser.json());
+
+// Enable CORS.
+app.use(cors());
 
 app.get('/reset', function (req, res) {
     reset();
@@ -97,13 +95,13 @@ app.post('/status', function (req, res) {
 // Server status.
 app.use(function (req, res, next) {
   if (serverStatus === 'up') return next();
-  return res.status(500).send();
+  return res.status(0).send();
 });
 
 // Books
 app.get('/book', function (req, res) {
     return res.send(_.toArray(books));
-})
+});
 
 app.get('/book/:id', function (req, res) {
     if (!books[req.params.id])
@@ -116,7 +114,7 @@ app.post('/book', function (req, res) {
     var titles = _.pluck(books, 'title');
     var authors = _.pluck(books, 'author');
 
-    if (_.contains(titles, res.body.title) && _.contains(authors, res.body.author)) {
+    if (_.contains(titles, req.body.title) && _.contains(authors, req.body.author)) {
         return res.status(400).send({});
     }
 
@@ -125,7 +123,7 @@ app.post('/book', function (req, res) {
         id = maxId.id + 1;
     }
 
-    books[id] = res.body;
+    books[id] = req.body;
     books[id].id = id;
     res.status(201).send(books[id]);
 });

@@ -1,5 +1,6 @@
 /*global $, _, Backbone, QUnit, expect, fauxServer, localStorage*/
 
+
 (function () {
     "use strict";
 
@@ -10,7 +11,12 @@
     }
 
     function serverStatus(status) {
-      $.post('http://localhost:3000/status', {status: status});
+        $.ajax({
+            url: 'http://localhost:3000/status',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({status: status})
+        });
     }
 
     localStorage.clear();
@@ -31,7 +37,7 @@
     });
 
     QUnit.asyncTest('collection: local & remote fetch + save', function (assert) {
-        // expect(8);
+        expect(8);
         localStorage.clear();
         reset();
 

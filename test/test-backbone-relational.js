@@ -1,19 +1,12 @@
 /*global $, _, Backbone, QUnit, expect, fauxServer, localStorage*/
 
+
 (function () {
     "use strict";
 
     $.ajaxSetup({ async: false });
 
     localStorage.clear();
-
-    var BookModel = Backbone.LocalCache.Model.mixin(Backbone.RelationalModel).extend({
-        defaults: {
-            title: 'Unknown title',
-            author: 'Unknown author'
-        },
-        urlRoot: 'http://localhost:3000/book'
-    });
 
     var LibraryCardModel = Backbone.LocalCache.Model.mixin(Backbone.RelationalModel).extend({
         defaults: {
@@ -98,10 +91,7 @@
         assert.equal(card2.get('user'), null);
 
         user2.fetch({
-            remote: false,
-            success: function (model, resp) {
-                // assert.deepEqual(resp, user2.toJSON());
-            }
+            remote: false
         });
 
         assert.notEqual(user2.get('card'), null);

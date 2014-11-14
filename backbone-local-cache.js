@@ -160,6 +160,7 @@
                                 deferred.reject();
                             }
                         };
+                        delete options.xhr;
                         self._parent.prototype.sync.call(self, request.method,
                             model.clone().clear().set(request.data), options);
                     });
@@ -185,15 +186,17 @@
                             if (options.local && syncSuccess) {
                                 syncSuccess(data);
                             } else if (syncError) {
-                                syncError(resp);
+                                syncError();
                             }
                         });
                     return;
                 }
             }
 
-            options.error = function (resp, foo, bar) {
-                if (!resp.status) {
+            delete options.xhr;
+
+            options.error = function (resp) {
+                if (!resp.status && method !== 'read') {
                     dirtyModels[storageKey] = dirtyModels[storageKey] || {};
                     dirtyModels[storageKey][Date.now()] = {
                         method: method,
@@ -227,19 +230,6 @@
                 break;
 
             case 'read':
-                options.error = function (resp) {
-                    dirtyModels[storageKey] = dirtyModels[storageKey] || {};
-                    dirtyModels[storageKey][Date.now()] = {
-                        method: method,
-                        data: data
-                    };
-                    localStorage.setObject('dirtyModels', dirtyModels);
-
-                    if (syncError) {
-                        syncError(resp);
-                    }
-                };
-
                 if (options.local) {
                     if (!self.id && !self.storageKey) {
                         if (syncError) {
