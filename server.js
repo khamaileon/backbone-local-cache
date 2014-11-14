@@ -1,6 +1,6 @@
-var app = require('express')();
+var express = require('express');
 var _ = require('lodash');
-var http = require('http').Server(app);
+var http = require('http');
 var bodyParser = require('body-parser');
 var cors = require('cors');
 
@@ -74,7 +74,8 @@ function reset() {
   cards = {};
 }
 
-var serverStatus = 'up';
+var app = express();
+var appServer = new http.Server(app);
 
 // Body parser.
 app.use(bodyParser.json());
@@ -82,20 +83,10 @@ app.use(bodyParser.json());
 // Enable CORS.
 app.use(cors());
 
-app.get('/reset', function (req, res) {
-    reset();
-    res.send('OK');
-});
-
-app.post('/status', function (req, res) {
-    serverStatus = req.body.status;
-    res.send('OK');
-});
-
-// Server status.
+// Disable keep-alive.
 app.use(function (req, res, next) {
-  if (serverStatus === 'up') return next();
-  return res.status(0).send();
+  res.set('Connection', 'close');
+  next();
 });
 
 // Books
@@ -184,6 +175,40 @@ app.post('card', function (req, res) {
     res.status(201).send(cards[id]);
 });
 
-http.listen(3000, function () {
-    console.log('listening on *:3000');
+function startApp() {
+    appServer.listen(3000);
+}
+
+function stopApp() {
+    appServer.close();
+}
+
+reset();
+startApp();
+
+// Monitor.
+var monitor = express();
+monitor.use(bodyParser.json());
+monitor.use(cors());
+
+monitor.post('/status', function (req, res) {
+    if (req.body.status === 'up') {
+      console.log('server up');
+      startApp();
+    }
+    else {
+      console.log('server down');
+      stopApp();
+    }
+
+    res.send('OK');
+});
+
+monitor.get('/reset', function (req, res) {
+    reset();
+    res.send('OK');
+});
+
+monitor.listen(3001, function () {
+    console.log('monitor listening on *:3001');
 });

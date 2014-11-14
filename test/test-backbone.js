@@ -7,12 +7,12 @@
     $.ajaxSetup({ async: false });
 
     function reset() {
-      $.get('http://localhost:3000/reset');
+      $.get('http://localhost:3001/reset');
     }
 
     function serverStatus(status) {
         $.ajax({
-            url: 'http://localhost:3000/status',
+            url: 'http://localhost:3001/status',
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({status: status})
