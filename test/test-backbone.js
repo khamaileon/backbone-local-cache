@@ -269,7 +269,6 @@
         QUnit.start();
     });
 
-
     QUnit.asyncTest('model: fetchOrSave', function (assert) {
         expect(4);
         localStorage.clear();
