@@ -149,6 +149,47 @@
         },
 
         /**
+         * Fetch or save.
+         *
+         * @param {string} [key]
+         * @param {string} [val]
+         * @param {object} [options]
+         *
+         * @returns {xhr}
+         */
+
+        fetchOrSave: function (key, val, options) {
+            var self = this;
+            var attrs = self.attributes;
+
+            // Handle both `"key", value` and `{key: value}` -style arguments.
+            if (key == null || typeof key === 'object') {
+                attrs = key;
+                options = val;
+            } else {
+                (attrs = {})[key] = val;
+            }
+
+            // Defaults options.
+            options = _.extend({
+                local: true,
+                remote: true,
+                autoSync: true
+            }, options);
+
+            // Backup original error method.
+            var fetchOrSaveError = options.error;
+
+            // Redefine error to call save method.
+            options.error = function () {
+                options.error = fetchOrSaveError;
+                return self.save(attrs, options);
+            };
+
+            return self.fetch(options);
+        },
+
+        /**
          * Override basic destroy method.
          *
          * @param {object} [options]

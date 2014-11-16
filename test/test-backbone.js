@@ -269,6 +269,50 @@
         QUnit.start();
     });
 
+
+    QUnit.asyncTest('model: fetchOrSave', function (assert) {
+        expect(7);
+        localStorage.clear();
+        reset();
+
+        var book = new BookModel({id: 8});
+
+        serverStatus('down');
+        book.fetchOrSave(null, {
+            local: false,
+            error: function (model, resp) {
+                assert.ok(true);
+            }
+        });
+
+        serverStatus('up');
+        book.fetchOrSave(null, {
+            remote: false,
+            autoSync: false,
+            success: function (model, resp) {
+                var storageKey = book.getStorageKey();
+                assert.deepEqual(resp, book.toJSON());
+                assert.deepEqual(Backbone.LocalCache.CacheStorage.get(storageKey), book.toJSON());
+                var pendingOperations = book.getPendingOperations();
+                assert.equal(_.size(pendingOperations), 1);
+            }
+        });
+
+        localStorage.clear();
+        book.fetchOrSave(null, {
+            autoSync: false,
+            success: function (model, resp) {
+                var storageKey = book.getStorageKey();
+                assert.deepEqual(resp, book.toJSON());
+                assert.deepEqual(Backbone.LocalCache.CacheStorage.get(storageKey), book.toJSON());
+                var pendingOperations = book.getPendingOperations();
+                assert.equal(_.size(pendingOperations), 0);
+            }
+        });
+
+        QUnit.start();
+    });
+
     QUnit.asyncTest('model: local & remote save', function (assert) {
         expect(4);
         localStorage.clear();
