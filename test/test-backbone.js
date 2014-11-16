@@ -93,8 +93,8 @@
         QUnit.start();
     });
 
-    QUnit.asyncTest('model: local save & fetch', function (assert) {
-        expect(4);
+    QUnit.asyncTest('model: save & fetch', function (assert) {
+        // expect(9);
         localStorage.clear();
         reset();
 
@@ -108,6 +108,7 @@
             success: function (model, resp) {
                 assert.deepEqual(resp, book.toJSON());
                 assert.deepEqual(Backbone.LocalCache.CacheStorage.get(book.storageKey), book.toJSON());
+                assert.notEqual(book.storageKey, book.url());
             }
         });
 
@@ -116,6 +117,16 @@
             success: function (model, resp) {
                 assert.deepEqual(resp, book.toJSON());
                 assert.deepEqual(Backbone.LocalCache.CacheStorage.get(book.storageKey), book.toJSON());
+                assert.notEqual(book.storageKey, book.url());
+            }
+        });
+
+        book.save(null, {
+            local: false,
+            success: function (model, resp) {
+                assert.deepEqual(resp, book.toJSON());
+                assert.deepEqual(Backbone.LocalCache.CacheStorage.get(book.getStorageKey()), book.toJSON());
+                assert.notEqual(book.storageKey, book.url());
             }
         });
 
@@ -269,6 +280,7 @@
         QUnit.start();
     });
 
+
     QUnit.asyncTest('model: fetchOrSave', function (assert) {
         expect(4);
         localStorage.clear();
@@ -351,6 +363,36 @@
                 assert.deepEqual(Backbone.LocalCache.CacheStorage.get(book.getStorageKey()), book.toJSON());
             }
         });
+
+        QUnit.start();
+    });
+
+    QUnit.asyncTest('model: fetch local', function (assert) {
+        expect(4);
+        localStorage.clear();
+        reset();
+
+        var book = new BookModel();
+        book.set({id: 9});
+        book.fetch({
+            local: false,
+            success: function (model, resp) {
+                assert.deepEqual(resp, book.toJSON());
+                assert.deepEqual(Backbone.LocalCache.CacheStorage.get(book.getStorageKey()), book.toJSON());
+            }
+        });
+        serverStatus('down');
+
+        var book2 = new BookModel();
+        book2.set({id: 9});
+        book2.fetch({
+            remote: false,
+            success: function (model, resp) {
+                assert.deepEqual(resp, book.toJSON());
+                assert.deepEqual(Backbone.LocalCache.CacheStorage.get(book.getStorageKey()), book.toJSON());
+            }
+        });
+        serverStatus('up');
 
         QUnit.start();
     });

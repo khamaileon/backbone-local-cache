@@ -60,8 +60,24 @@
          */
 
         getStorageKey: function () {
+            if (!this.isNew()) return this.url();
             this.storageKey = this.storageKey || generateUUID();
             return this.storageKey;
+        },
+
+        /**
+         * Update storage key.
+         *
+         * @returns {string}
+         */
+
+        updateStorageKey: function () {
+            var self = this;
+            if (!self.isNew() && self.storageKey) {
+                Backbone.LocalCache.CacheStorage.set(self.url(), self.toJSON());
+                Backbone.LocalCache.CacheStorage.del(this.storageKey);
+                this.storageKey = this.url();
+            }
         },
 
         /**
@@ -142,6 +158,8 @@
                 // Call the original success method.
                 if (saveSuccess)
                     saveSuccess(model, resp, options);
+
+                self.updateStorageKey();
             };
 
             // Call parent save method.
@@ -149,7 +167,7 @@
         },
 
         /**
-         * Fetch or save.
+         * Fetch a model or save it if the fetch operation fails.
          *
          * @param {string} [key]
          * @param {string} [val]
@@ -177,13 +195,15 @@
                 autoSync: true
             }, options);
 
-            // Backup original error method.
+            // Backup original methods.
+            var fetchOrSaveSuccess = options.success;
             var fetchOrSaveError = options.error;
 
             // Redefine error to call save method.
             options.error = function () {
+                options.success = fetchOrSaveSuccess;
                 options.error = fetchOrSaveError;
-                return self.save(attrs, options);
+                self.save(attrs, options);
             };
 
             return self.fetch(options);
