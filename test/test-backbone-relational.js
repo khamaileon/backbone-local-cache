@@ -51,8 +51,8 @@
 
         card.save(null, {
             remote: false,
-            success: function (model, resp, options) {
-                cardStorageKey = options.storageKey;
+            success: function (model, resp) {
+                cardStorageKey = card.getStorageKey();
                 assert.deepEqual(resp, card.toJSON());
             }
         });
@@ -65,8 +65,8 @@
 
         user.save(null, {
             remote: false,
-            success: function (model, resp, options) {
-                userStorageKey = options.storageKey;
+            success: function (model, resp) {
+                userStorageKey = user.getStorageKey();
                 assert.deepEqual(resp, user.toJSON());
             }
         });

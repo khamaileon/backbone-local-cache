@@ -75,18 +75,18 @@
             remote: false,
             success: function (collection) {
                 var storageKeys = collection.map(function (model) {
-                    return model.getLocaleStorageKey();
+                    return model.getStorageKey();
                 });
-                assert.deepEqual(localStorage.getObject(collection.url), storageKeys);
+                assert.deepEqual(Backbone.LocalCache.CacheStorage.get(collection.url), storageKeys);
             }
         });
 
         var book = books.get({id: 2});
-        assert.deepEqual(localStorage.getObject(book.getLocaleStorageKey()), book.toJSON());
+        assert.deepEqual(Backbone.LocalCache.CacheStorage.get(book.getStorageKey()), book.toJSON());
         book.destroy({
             remote: false,
             success: function (model) {
-                assert.ok(!_.has(localStorage, model.getLocaleStorageKey()));
+                assert.ok(!_.has(localStorage, model.getStorageKey()));
             }
         });
 
@@ -94,7 +94,7 @@
     });
 
     QUnit.asyncTest('model: local save & fetch', function (assert) {
-        expect(6);
+        expect(4);
         localStorage.clear();
         reset();
 
@@ -105,11 +105,9 @@
 
         book.save(null, {
             remote: false,
-            success: function (model, resp, options) {
-                assert.ok(_.has(options, 'storageKey'));
+            success: function (model, resp) {
                 assert.deepEqual(resp, book.toJSON());
-                assert.equal(options.storageKey, book.storageKey);
-                assert.deepEqual(localStorage.getObject(book.storageKey), book.toJSON());
+                assert.deepEqual(Backbone.LocalCache.CacheStorage.get(book.storageKey), book.toJSON());
             }
         });
 
@@ -117,7 +115,7 @@
             remote: false,
             success: function (model, resp) {
                 assert.deepEqual(resp, book.toJSON());
-                assert.deepEqual(localStorage.getObject(book.storageKey), book.toJSON());
+                assert.deepEqual(Backbone.LocalCache.CacheStorage.get(book.storageKey), book.toJSON());
             }
         });
 
@@ -191,7 +189,7 @@
     });
 
     QUnit.asyncTest('model: local update + partial', function (assert) {
-        expect(13);
+        expect(11);
         localStorage.clear();
         reset();
 
@@ -205,7 +203,7 @@
             success: function (model, resp) {
                 assert.equal(resp.author, 'Ernest Hemingway');
                 assert.equal(book.get('author'), 'Ernest Hemingway');
-                assert.deepEqual(localStorage.getObject(book.url()), null);
+                assert.deepEqual(Backbone.LocalCache.CacheStorage.get(book.url()), null);
             }
         });
 
@@ -216,7 +214,7 @@
             success: function (model, resp) {
                 assert.equal(resp.author, 'Ernest Hemingway');
                 assert.equal(book.get('author'), 'Ernest Hemingway');
-                assert.deepEqual(localStorage.getObject(book.url()), book.toJSON());
+                assert.deepEqual(Backbone.LocalCache.CacheStorage.get(book.getStorageKey()), book.toJSON());
             }
         });
 
@@ -228,14 +226,12 @@
 
         book.save(null, {
             remote: false,
-            success: function (model, resp, options) {
-                assert.ok(_.has(options, 'storageKey'));
-                assert.equal(options.storageKey, book.url());
+            success: function (model, resp) {
                 assert.equal(resp.title, 'The Grapes of Wrath');
                 assert.equal(resp.year, '1929');
                 assert.equal(book.get('title'), 'The Grapes of Wrath');
                 assert.equal(book.get('year'), '1929');
-                assert.deepEqual(localStorage.getObject(book.url()), book.toJSON());
+                assert.deepEqual(Backbone.LocalCache.CacheStorage.get(book.getStorageKey()), book.toJSON());
             }
         });
 
@@ -255,7 +251,7 @@
         book.save(null, {
             success: function (model, resp) {
                 assert.deepEqual(resp, book.toJSON());
-                assert.deepEqual(localStorage.getObject(book.getLocaleStorageKey()), book.toJSON());
+                assert.deepEqual(Backbone.LocalCache.CacheStorage.get(book.getStorageKey()), book.toJSON());
             }
         });
 
@@ -274,7 +270,7 @@
     });
 
     QUnit.asyncTest('model: local & remote save', function (assert) {
-        expect(6);
+        expect(4);
         localStorage.clear();
         reset();
 
@@ -287,8 +283,7 @@
         book.save(null, {
             success: function (model, resp) {
                 assert.deepEqual(resp, book.toJSON());
-                assert.deepEqual(localStorage.getObject(book.getLocaleStorageKey()), book.toJSON());
-                assert.deepEqual(localStorage.getObject(book.storageKey), book.toJSON());
+                assert.deepEqual(Backbone.LocalCache.CacheStorage.get(book.getStorageKey()), book.toJSON());
             }
         });
 
@@ -297,8 +292,7 @@
             autoSync: false,
             success: function (model, resp) {
                 assert.deepEqual(resp, book.toJSON());
-                assert.deepEqual(localStorage.getObject(book.getLocaleStorageKey()), book.toJSON());
-                assert.deepEqual(localStorage.getObject(book.storageKey), null);
+                assert.deepEqual(Backbone.LocalCache.CacheStorage.get(book.getStorageKey()), book.toJSON());
             }
         });
 
@@ -324,14 +318,14 @@
         book.fetch({
             success: function (model, resp) {
                 assert.deepEqual(resp, book.toJSON());
-                assert.deepEqual(localStorage.getObject(book.getLocaleStorageKey()), book.toJSON());
+                assert.deepEqual(Backbone.LocalCache.CacheStorage.get(book.getStorageKey()), book.toJSON());
             }
         });
 
         QUnit.start();
     });
 
-    QUnit.asyncTest('model: fetchOrSave', function (assert) {
+    QUnit.asyncTest('model: sync pending operations', function (assert) {
         expect(6);
         localStorage.clear();
         reset();
@@ -342,65 +336,23 @@
         });
 
         serverStatus('down');
-        book.fetchOrSave(null, {
-            local: false,
-            error: function (model, resp) {
-                assert.ok(true);
-            }
-        });
-
-        serverStatus('up');
-        book.fetchOrSave(null, {
-            remote: false,
-            autoSync: false,
-            success: function (model, resp) {
-                assert.deepEqual(resp, book.toJSON());
-                assert.deepEqual(localStorage.getObject(book.getLocaleStorageKey()), book.toJSON());
-                assert.deepEqual(localStorage.getObject(book.storageKey), book.toJSON());
-            }
-        });
-
-        book.fetchOrSave(null, {
-            autoSync: false,
-            success: function (model, resp) {
-                assert.deepEqual(resp, book.toJSON());
-                assert.deepEqual(localStorage.getObject(book.getLocaleStorageKey()), book.toJSON());
-            }
-        });
-
-        QUnit.start();
-    });
-
-    QUnit.asyncTest('model: sync dirty models', function (assert) {
-        expect(11);
-        localStorage.clear();
-        reset();
-
-        var book = new BookModel({
-            title: 'Les Paradis artificiels',
-            author: 'Baudelaire'
-        });
-
-        serverStatus('down');
         book.save(null, {
             success: function (model, resp) {
-                var storageKey = book.getLocaleStorageKey();
+                var storageKey = book.getStorageKey();
                 assert.deepEqual(resp, book.toJSON());
-                assert.deepEqual(localStorage.getObject(storageKey), book.toJSON());
-                var dirtyModels = localStorage.getObject('dirtyModels');
-                assert.equal(_.size(dirtyModels), 1);
-                assert.equal(_.size(dirtyModels[storageKey]), 1);
+                assert.deepEqual(Backbone.LocalCache.CacheStorage.get(storageKey), book.toJSON());
+                var pendingOperations = book.getPendingOperations();
+                assert.equal(_.size(pendingOperations), 1);
             }
         });
 
         book.save(null, {
             success: function (model, resp) {
-                var storageKey = book.getLocaleStorageKey();
+                var storageKey = book.getStorageKey();
                 assert.deepEqual(resp, book.toJSON());
-                assert.deepEqual(localStorage.getObject(storageKey), book.toJSON());
-                var dirtyModels = localStorage.getObject('dirtyModels');
-                assert.equal(_.size(dirtyModels), 1);
-                assert.equal(_.size(dirtyModels[storageKey]), 2);
+                assert.deepEqual(Backbone.LocalCache.CacheStorage.get(storageKey), book.toJSON());
+                var pendingOperations = book.getPendingOperations();
+                assert.equal(_.size(pendingOperations), 1);
             }
         });
 
@@ -409,9 +361,9 @@
             patch: true,
             success: function (model, resp) {
                 assert.deepEqual(resp, book.toJSON());
-                assert.deepEqual(localStorage.getObject(book.getLocaleStorageKey()), book.toJSON());
-                var dirtyModels = localStorage.getObject('dirtyModels');
-                assert.equal(_.size(dirtyModels), 0);
+                assert.deepEqual(Backbone.LocalCache.CacheStorage.get(book.getStorageKey()), book.toJSON());
+                var pendingOperations = book.getPendingOperations();
+                assert.equal(_.size(pendingOperations), 0);
             }
         });
 

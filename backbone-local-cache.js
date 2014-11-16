@@ -24,52 +24,95 @@
         });
     }
 
-    // https://stackoverflow.com/questions/2010892/storing-objects-in-html5-localstorage
-    Storage.prototype.setObject = function (key, value) {
-        this.setItem(key, JSON.stringify(value));
-    };
-
-    Storage.prototype.getObject = function (key) {
-        var value = this.getItem(key);
-        return value && JSON.parse(value);
-    };
-
     Backbone.LocalCache = {};
 
+    Backbone.LocalCache.CacheStorage = {
+        get: function (key) {
+            var value = window.localStorage.getItem(key);
+            return value && JSON.parse(value);
+        },
+        set: function (key, value) {
+            return window.localStorage.setItem(key, JSON.stringify(value));
+        },
+        del: function (key) {
+            return window.localStorage.removeItem(key);
+        }
+    };
+
     Backbone.LocalCache.Model = {
+
+        /**
+         * Mixin model with a parent model.
+         *
+         * @param {Backbone.Model}
+         * @returns {Backbone.LocalCache.Model}
+         */
+
         mixin: function (Model) {
             this._parent = Model;
             return Model.extend(Backbone.LocalCache.Model);
         },
 
+        /**
+         * Return storage key.
+         *
+         * @returns {string}
+         */
+
+        getStorageKey: function () {
+            this.storageKey = this.storageKey || generateUUID();
+            return this.storageKey;
+        },
+
+        /**
+         * Override basic fetch method.
+         *
+         * @param {object} [options]
+         * @returns {xhr}
+         */
+
         fetch: function (options) {
             var self = this;
 
+            // Defauts options.
             options = _.extend({
                 local: true,
                 remote: true,
                 cache: true,
                 autoSync: true
-            }, options);
+            }, options || {});
 
+            // Backup original success method.
             var fetchSuccess = options.success;
 
+            // Redefine success to add cache.
             options.success = function (model, resp, options) {
-                if (options.cache) {
-                    localStorage.setObject(self.getLocaleStorageKey(), self.toJSON());
-                }
+                // Cache data.
+                if (options.cache)
+                    Backbone.LocalCache.CacheStorage.set(self.getStorageKey(), self.toJSON());
 
-                if (fetchSuccess) {
+                // Call the original success method.
+                if (fetchSuccess)
                     fetchSuccess(model, resp, options);
-                }
             };
 
+            // Call parent fetch method.
             return self._parent.prototype.fetch.call(self, options);
         },
 
+        /**
+         * Override basic save method.
+         *
+         * @param {string} [key]
+         * @param {string} [val]
+         * @param {object} [options]
+         *
+         * @returns {xhr}
+         */
+
         save: function (key, val, options) {
-            var self = this,
-                attrs = self.attributes;
+            var self = this;
+            var attrs = self.attributes;
 
             // Handle both `"key", value` and `{key: value}` -style arguments.
             if (key == null || typeof key === 'object') {
@@ -79,254 +122,240 @@
                 (attrs = {})[key] = val;
             }
 
+            // Defaults options.
             options = _.extend({
                 local: true,
                 remote: true,
                 cache: true,
                 autoSync: true
-            }, options);
+            }, options || {});
 
+            // Backup original success method.
             var saveSuccess = options.success;
 
+            // Redefine success to add cache.
             options.success = function (model, resp, options) {
-                if (options.cache) {
-                    localStorage.setObject(self.getLocaleStorageKey(), self.toJSON());
-                }
+                // Cache data.
+                if (options.cache)
+                    Backbone.LocalCache.CacheStorage.set(self.getStorageKey(), self.toJSON());
 
-                if (self.getLocaleStorageKey() !== self.storageKey) {
-                    localStorage.removeItem(self.storageKey);
-                }
-
-                if (saveSuccess) {
+                // Call the original success method.
+                if (saveSuccess)
                     saveSuccess(model, resp, options);
-                }
             };
 
+            // Call parent save method.
             return self._parent.prototype.save.call(self, attrs, options);
         },
+
+        /**
+         * Override basic destroy method.
+         *
+         * @param {object} [options]
+         * @returns {xhr}
+         */
 
         destroy: function (options) {
             var self = this;
 
+            // Defaults options.
             options = _.extend({
                 local: true,
                 remote: true,
                 autoSync: true
             }, options);
 
+            // Call parent destroy method.
             return self._parent.prototype.destroy.call(self, options);
         },
 
-        getLocaleStorageKey: function () {
-            var self = this;
-            if (self.isNew()) {
-                if (!self.storageKey) {
-                    self.storageKey = generateUUID();
-                }
-                return self.storageKey;
-            }
-            return self.url();
+        /**
+         * Returns true if there is pending operations.
+         *
+         * @returns {boolean}
+         */
+
+        hasPendingOperations: function () {
+            var operations = this.getPendingOperations();
+            return !!operations.length;
         },
 
+        /**
+         * Return pending operations for this model.
+         *
+         * @returns {object[]}
+         */
+
+        getPendingOperations: function () {
+            return Backbone.LocalCache.CacheStorage.get(
+                'pendingOperations:' + this.getStorageKey()
+            ) || [];
+        },
+
+        /**
+         * Add a new pending operation.
+         *
+         * @param {object} operation
+         */
+
+        addPendingOperation: function (operation) {
+            var operations = this.getPendingOperations();
+            operations.push(operation);
+
+            return Backbone.LocalCache.CacheStorage.set(
+                'pendingOperations:' + this.getStorageKey(),
+                operations
+            );
+        },
+
+        /**
+         * Remove pending operations.
+         */
+
+        delPendingOperations: function () {
+            return Backbone.LocalCache.CacheStorage.del(
+                'pendingOperations:' + this.getStorageKey()
+            );
+        },
+
+        /**
+         * Run pending operations not executed because of offline.
+         *
+         * @returns {Deferred}
+         */
+
+        executePendingOperations: function () {
+            var self = this;
+            var pendingOperations = self.getPendingOperations();
+
+            // If there is no pending operations, stop here.
+            if (!pendingOperations.length) return ;
+
+            var deferreds = [];
+            _(pendingOperations).each(function (operation) {
+                var deferred = new $.Deferred();
+                deferreds.push(deferred);
+
+                var options = _.extend({}, operation.options);
+
+                options.success = function () {
+                    pendingOperations = _.without(pendingOperations, operation);
+                    deferred.resolve(operation);
+                };
+
+                options.error = function (resp) {
+                    if (!resp.status) return deferred.reject();
+
+                    pendingOperations = _.without(pendingOperations, operation);
+                    deferred.resolve(operation);
+                };
+
+                self._parent.prototype.sync.call(self, operation.method,
+                    self.clone().clear().set(operation.data), options);
+            });
+
+            return $.when.apply($, deferreds)
+                .done(function () {
+                    if (_.isEmpty(pendingOperations))
+                        self.delPendingOperations();
+                });
+        },
+
+        /**
+         * Override basic sync method.
+         *
+         * @param {string} method
+         * @param {Backbone.Model} model
+         * @param {object} options
+         * @returns {xhr}
+         */
+
         sync: function (method, model, options) {
-            var self = this,
-                data = options.attrs || model.toJSON(options),
-                syncSuccess = options.success,
-                syncError = options.error,
-                dirtyModels = localStorage.getObject('dirtyModels') || {},
-                storageKey = self.getLocaleStorageKey();
+            var self = this;
+            var data = options.attrs || model.toJSON(options);
 
-            if (options.local) {
-                options.storageKey = storageKey;
-            }
+            // Backup original methods.
+            var syncSuccess = options.success || function () {};
+            var syncError = options.error || function () {};
 
-            if (options.local && options.remote && options.autoSync) {
-                var dirtyModel = dirtyModels[storageKey];
-                if (dirtyModel) {
-                    var deferreds = [];
-                    _(dirtyModel).each(function (request, timestamp) {
-                        var deferred = new $.Deferred();
-                        deferreds.push(deferred);
-                        options.autoSync = false;
-                        options.success = function () {
-                            delete dirtyModel[timestamp];
-                            deferred.resolve(timestamp);
-                        };
-                        options.error = function (resp) {
-                            if (resp.status) {
-                                delete dirtyModel[timestamp];
-                                deferred.resolve(timestamp);
-                            } else {
-                                deferred.reject();
-                            }
-                        };
-                        delete options.xhr;
-                        self._parent.prototype.sync.call(self, request.method,
-                            model.clone().clear().set(request.data), options);
+            if (options.autoSync && self.hasPendingOperations()) {
+                return self.executePendingOperations()
+                .fail(function () {
+                    self.addPendingOperation({
+                        method: method,
+                        data: data,
+                        options: options
                     });
-
-                    $.when.apply($, deferreds)
-                        .done(function () {
-                            if (_.isEmpty(dirtyModel)) {
-                                delete dirtyModels[storageKey];
-                            }
-                            localStorage.setObject('dirtyModels', dirtyModels);
-
-                            options.success = syncSuccess;
-                            options.error = syncError;
-                            return self.sync(method, model, options);
-                        })
-                        .fail(function () {
-                            dirtyModels[storageKey][Date.now()] = {
-                                method: method,
-                                data: data
-                            };
-                            localStorage.setObject('dirtyModels', dirtyModels);
-
-                            if (options.local && syncSuccess) {
-                                syncSuccess(data);
-                            } else if (syncError) {
-                                syncError();
-                            }
-                        });
-                    return;
-                }
+                })
+                .done(function () {
+                    return self.sync(method, model, options);
+                });
             }
-
-            delete options.xhr;
 
             options.error = function (resp) {
-                if (!resp.status && method !== 'read') {
-                    dirtyModels[storageKey] = dirtyModels[storageKey] || {};
-                    dirtyModels[storageKey][Date.now()] = {
-                        method: method,
-                        data: data
-                    };
-                    localStorage.setObject('dirtyModels', dirtyModels);
+                if (resp.status || method === 'read')
+                    return syncError(resp);
 
-                    if (options.local && syncSuccess) {
-                        syncSuccess(data);
-                    } else if (syncError) {
-                        syncError(resp);
-                    }
-                } else if (syncError) {
+                self.addPendingOperation({
+                    method: method,
+                    data: data,
+                    options: options
+                });
+
+                if (options.local) {
+                    syncSuccess(data);
+                } else {
                     syncError(resp);
                 }
             };
 
             switch (method) {
             case 'create':
-                if (options.local) {
-                    localStorage.setObject(storageKey, data);
-
-                    if (!options.remote && syncSuccess) {
-                        syncSuccess(data);
-                    }
-                }
-
-                if (options.remote) {
-                    return self._parent.prototype.sync.call(self, method, model, options);
-                }
-                break;
+                if (!options.remote) return syncSuccess(data);
+                return self._parent.prototype.sync.call(self, method, model, options);
 
             case 'read':
                 if (options.local) {
-                    if (!self.id && !self.storageKey) {
-                        if (syncError) {
-                            syncError();  // TODO: id error
-                        }
-                        break;
-                    }
+                    if (!self.id && !self.storageKey)
+                        return syncError();  // TODO: id error
 
                     if (!options.remote) {
-                        if (localStorage.getObject(storageKey) && syncSuccess) {
-                            syncSuccess(localStorage.getObject(storageKey));
-                        } else if (syncError) {
-                            syncError();  // TODO: 404 error response
-                        }
-                    }
-                }
-                if (options.remote) {
-                    if (!self.id) {
-                        if (syncError) {
-                            syncError();  // TODO: id error
-                        }
-                        break;
-                    }
+                        var cacheObj = Backbone.LocalCache.CacheStorage.get(self.getStorageKey());
 
-                    return self._parent.prototype.sync.call(self, method, model, options);
+                        if (cacheObj)
+                            return syncSuccess(cacheObj);
+
+                        return syncError();  // TODO: 404 error response
+                    }
                 }
-                break;
+
+                if (options.remote)
+                    return self._parent.prototype.sync.call(self, method, model, options);
 
             case 'update':
-                if (options.local) {
-                    localStorage.setObject(storageKey, data);
+                if (options.local && !options.remote)
+                    return syncSuccess(data);
 
-                    if (!options.remote && syncSuccess) {
-                        syncSuccess(data);
-                    }
-                }
-
-                if (options.remote) {
+                if (options.remote)
                     return self._parent.prototype.sync.call(self, method, model, options);
-                }
-                break;
 
             case 'patch':
-                if (options.local) {
-                    localStorage.setObject(storageKey, _.extend(localStorage[storageKey], self.attrs));
+                if (options.local && !options.remote)
+                    return syncSuccess(data);
 
-                    if (!options.remote && syncSuccess) {
-                        syncSuccess(localStorage.getObject(storageKey));
-                    }
-                }
-
-                if (options.remote) {
+                if (options.remote)
                     return self._parent.prototype.sync.call(self, method, model, options);
-                }
-                break;
 
             case 'delete':
                 if (options.local) {
-                    localStorage.removeItem(storageKey);
-                    if (!options.remote) {
-                        syncSuccess();  // TODO: 204 ?
-                    }
+                    Backbone.LocalCache.CacheStorage.del(self.getStorageKey());
+
+                    if (!options.remote) return syncSuccess(); // TODO 204
                 }
 
-                if (options.remote) {
+                if (options.remote)
                     return self._parent.prototype.sync.call(self, method, model, options);
-                }
-                break;
             }
-        },
-
-        fetchOrSave: function (key, val, options) {
-            var self = this,
-                attrs = self.attributes;
-
-            // Handle both `"key", value` and `{key: value}` -style arguments.
-            if (key == null || typeof key === 'object') {
-                attrs = key;
-                options = val;
-            } else {
-                (attrs = {})[key] = val;
-            }
-
-            options = _.extend({
-                local: true,
-                remote: true,
-                autoSync: true
-            }, options);
-
-            var fetchOrSaveError = options.error;
-
-            options.error = function () {
-                options.error = fetchOrSaveError;
-                self.save(attrs, options);
-            };
-
-            return self.fetch(options);
         }
     };
 
@@ -338,52 +367,58 @@
         fetch: function (options) {
             var self = this;
 
+            // Defaults options.
             options = _.extend({
                 local: true,
                 remote: true,
                 cache: true
-            }, options);
+            }, options || {});
 
-            var fetchSuccess = options.success;
+
+            // Backup original succes method.
+            var fetchSuccess = options.success || function () {};
+
 
             options.success = function (collection, resp, options) {
                 if (options.cache) {
                     collection.each(function (model) {
                         model.save(null, {remote: false});
                     });
+
                     var storageKeys = self.map(function (model) {
-                        return model.getLocaleStorageKey();
+                        return model.getStorageKey();
                     });
-                    localStorage.setObject(self.url, storageKeys);
+
+                    Backbone.LocalCache.CacheStorage.set(self.url, storageKeys);
                 }
 
-                if (fetchSuccess) {
-                    fetchSuccess(collection, resp, options);
-                }
+                fetchSuccess(collection, resp, options);
             };
 
             return self._parent.prototype.fetch.call(self, options);
         },
 
         sync: function (method, collection, options) {
-            var self = this,
-                syncSuccess = options.success,
-                syncParse = options.parse;
+            var self = this;
+            var syncSuccess = options.success || function () {};
+            var syncParse = options.parse;
 
             switch (method) {
             case 'read':
                 if (options.local) {
                     options.parse = false;
-                    var storageKeys = localStorage.getObject(self.url);
+                    var storageKeys = Backbone.LocalCache.CacheStorage.get(self.url);
                     var models = _.map(storageKeys, function (storageKey) {
-                        return localStorage.getObject(storageKey);
+                        return Backbone.LocalCache.CacheStorage.get(storageKey);
                     });
                     syncSuccess(models);
                 }
+
                 if (options.remote) {
                     options.parse = syncParse;
                     return self._parent.prototype.sync.call(self, method, collection, options);
                 }
+
                 break;
             }
         }
