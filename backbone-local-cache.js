@@ -66,9 +66,7 @@
         },
 
         /**
-         * Update key for storage and pending operations
-         *
-         * @returns {string}
+         * Update storage key.
          */
 
         updateStorageKey: function () {
@@ -76,16 +74,19 @@
             if (!self.isNew() && self.storageKey) {
                 Backbone.LocalCache.CacheStorage.set(self.url(), self.toJSON());
                 Backbone.LocalCache.CacheStorage.del(this.storageKey);
-
-                var oldKey = 'pendingOperations:' + this.getStorageKey();
-                var newKey = 'pendingOperations:' + self.toJSON();
-                var value = Backbone.LocalCache.CacheStorage.get(oldKey);
-                Backbone.LocalCache.CacheStorage.set(newKey, value);
-                Backbone.LocalCache.CacheStorage.del(oldKey);
-
                 this.storageKey = this.url();
-                return this.storageKey;
             }
+        },
+
+        /**
+         * Return an id for the model class.
+         *
+         * @returns {string}
+         */
+
+        getModelClassId: function () {
+            if (this.modelClassId === undefined) throw "modelClassId undefined";
+            return this.modelClassId;
         },
 
         /**
@@ -257,7 +258,7 @@
 
         getPendingOperations: function () {
             return Backbone.LocalCache.CacheStorage.get(
-                'pendingOperations:' + this.getStorageKey()
+                'pendingOperations:' + this.getModelClassId()
             ) || [];
         },
 
@@ -272,7 +273,7 @@
             operations.push(operation);
 
             return Backbone.LocalCache.CacheStorage.set(
-                'pendingOperations:' + this.getStorageKey(),
+                'pendingOperations:' + this.getModelClassId(),
                 operations
             );
         },
@@ -283,7 +284,7 @@
 
         delPendingOperations: function () {
             return Backbone.LocalCache.CacheStorage.del(
-                'pendingOperations:' + this.getStorageKey()
+                'pendingOperations:' + this.getModelClassId()
             );
         },
 

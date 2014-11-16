@@ -24,6 +24,7 @@
     reset();
 
     var BookModel = Backbone.LocalCache.Model.mixin(Backbone.Model).extend({
+        modelClassId: 'book-model',
         defaults: {
             title: 'Unknown title',
             author: 'Unknown author'
