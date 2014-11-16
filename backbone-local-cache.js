@@ -66,7 +66,7 @@
         },
 
         /**
-         * Update storage key.
+         * Update key for storage and pending operations
          *
          * @returns {string}
          */
@@ -76,7 +76,15 @@
             if (!self.isNew() && self.storageKey) {
                 Backbone.LocalCache.CacheStorage.set(self.url(), self.toJSON());
                 Backbone.LocalCache.CacheStorage.del(this.storageKey);
+
+                var oldKey = 'pendingOperations:' + this.getStorageKey();
+                var newKey = 'pendingOperations:' + self.toJSON();
+                var value = Backbone.LocalCache.CacheStorage.get(oldKey);
+                Backbone.LocalCache.CacheStorage.set(newKey, value);
+                Backbone.LocalCache.CacheStorage.del(oldKey);
+
                 this.storageKey = this.url();
+                return this.storageKey;
             }
         },
 

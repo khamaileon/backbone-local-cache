@@ -94,7 +94,7 @@
     });
 
     QUnit.asyncTest('model: save & fetch', function (assert) {
-        // expect(9);
+        expect(9);
         localStorage.clear();
         reset();
 
