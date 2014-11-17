@@ -251,6 +251,19 @@
         },
 
         /**
+         * Set pending operations for this model.
+         *
+         * @param {object} operations
+         */
+
+        setPendingOperations: function (operations) {
+            return Backbone.LocalCache.CacheStorage.set(
+                'pendingOperations:' + this.getModelClassId(),
+                operations
+            );
+        },
+
+        /**
          * Return pending operations for this model.
          *
          * @returns {object[]}
@@ -296,39 +309,46 @@
 
         executePendingOperations: function () {
             var self = this;
-            var pendingOperations = self.getPendingOperations();
+            var deferred = new $.Deferred();
+            var operations = self.getPendingOperations();
 
-            // If there is no pending operations, stop here.
-            if (!pendingOperations.length) return ;
+            self.executeOperations(deferred, operations);
 
-            var deferreds = [];
-            _(pendingOperations).each(function (operation) {
-                var deferred = new $.Deferred();
-                deferreds.push(deferred);
-
-                var options = _.extend({}, operation.options);
-
-                options.success = function () {
-                    pendingOperations = _.without(pendingOperations, operation);
-                    deferred.resolve(operation);
-                };
-
-                options.error = function (resp) {
-                    if (!resp.status) return deferred.reject();
-
-                    pendingOperations = _.without(pendingOperations, operation);
-                    deferred.resolve(operation);
-                };
-
-                self._parent.prototype.sync.call(self, operation.method,
-                    self.clone().clear().set(operation.data), options);
-            });
-
-            return $.when.apply($, deferreds)
-                .done(function () {
-                    if (_.isEmpty(pendingOperations))
+            return deferred
+                .done(function (operations) {
+                    self.setPendingOperations(operations);
+                    if (_.isEmpty(operations))
                         self.delPendingOperations();
                 });
+        },
+
+        /**
+         * Execute recursively all pending operations.
+         *
+         * @param {object} [deferred]
+         * @param {object[]} [operations]
+         */
+
+        executeOperations: function (deferred, operations) {
+            var self = this;
+            if (_.isEmpty(operations)) {
+                return deferred.resolve(operations);
+            }
+
+            var operation = operations.shift();
+            var options = _.extend({}, operation.options);
+
+            options.success = function () {
+                self.executeOperations(deferred, operations);
+            };
+
+            options.error = function (resp) {
+                if (!resp.status) return deferred.resolve(operations);
+                self.executeOperations(deferred, operations);
+            };
+
+            self._parent.prototype.sync.call(self, operation.method,
+                self.clone().clear().set(operation.data), options);
         },
 
         /**

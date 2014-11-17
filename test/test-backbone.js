@@ -20,7 +20,6 @@
     }
 
     localStorage.clear();
-
     reset();
 
     var BookModel = Backbone.LocalCache.Model.mixin(Backbone.Model).extend({
@@ -399,7 +398,7 @@
     });
 
     QUnit.asyncTest('model: sync pending operations', function (assert) {
-        expect(6);
+        expect(9);
         localStorage.clear();
         reset();
 
