@@ -39,7 +39,21 @@
         }
     };
 
+    Backbone.LocalCache.models = {};
+
     Backbone.LocalCache.Model = {
+
+        constructor : function (attributes, options) {
+            // Defaults options.
+            options = _.extend({
+                autoSync: true,
+            }, options || {});
+
+            if (options.autoSync) {
+                if (this.hasPendingOperations()) this.executePendingOperations();
+            }
+            this._parent.apply(this, arguments);
+        },
 
         /**
          * Mixin model with a parent model.
@@ -317,8 +331,7 @@
             return deferred
                 .done(function (operations) {
                     self.setPendingOperations(operations);
-                    if (_.isEmpty(operations))
-                        self.delPendingOperations();
+                    if (_.isEmpty(operations)) self.delPendingOperations();
                 });
         },
 
@@ -331,9 +344,7 @@
 
         executeOperations: function (deferred, operations) {
             var self = this;
-            if (_.isEmpty(operations)) {
-                return deferred.resolve(operations);
-            }
+            if (_.isEmpty(operations)) return deferred.resolve(operations);
 
             var operation = operations.shift();
             var options = _.extend({}, operation.options);
@@ -347,8 +358,8 @@
                 self.executeOperations(deferred, operations);
             };
 
-            self._parent.prototype.sync.call(self, operation.method,
-                self.clone().clear().set(operation.data), options);
+            var model = new this.constructor(operation.data, { autoSync: false });
+            self._parent.prototype.sync.call(self, operation.method, model, options);
         },
 
         /**
