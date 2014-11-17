@@ -442,4 +442,34 @@
         QUnit.start();
     });
 
+    QUnit.asyncTest('model: sync all pending operations', function (assert) {
+        expect(4);
+        localStorage.clear();
+        reset();
+
+        var book = new BookModel({
+            title: 'Les Paradis artificiels',
+            author: 'Baudelaire'
+        });
+
+        serverStatus('down');
+        book.save(null, {
+            success: function (model, resp) {
+                var storageKey = book.getStorageKey();
+                assert.deepEqual(resp, book.toJSON());
+                assert.deepEqual(Backbone.LocalCache.CacheStorage.get(storageKey), book.toJSON());
+                var pendingOperations = book.getPendingOperations();
+                assert.equal(_.size(pendingOperations), 1);
+            }
+        });
+
+        serverStatus('up');
+        Backbone.LocalCache.executeAllPendingOperations().
+            done(function () {
+                assert.ok(true);
+            });
+
+        QUnit.start();
+    });
+
 }());

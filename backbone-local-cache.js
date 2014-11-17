@@ -39,20 +39,34 @@
         }
     };
 
-    Backbone.LocalCache.models = {};
+    Backbone.LocalCache.Models = {};
+
+    Backbone.LocalCache.executeAllPendingOperations = function () {
+        var deferred = $.Deferred();
+
+        _.each(Backbone.LocalCache.Models, function (Model) {
+            var model = new Model();
+
+            if (model.hasPendingOperations()) {
+
+                model.executePendingOperations()
+                    .done(function () {
+                        deferred.resolve();
+                    })
+                    .fail(function () {
+                        deferred.reject();
+                    });
+            }
+        });
+        return deferred;
+    };
 
     Backbone.LocalCache.Model = {
 
         constructor : function (attributes, options) {
-            // Defaults options.
-            options = _.extend({
-                autoSync: true,
-            }, options || {});
-
-            if (options.autoSync) {
-                if (this.hasPendingOperations()) this.executePendingOperations();
-            }
-            this._parent.apply(this, arguments);
+            var self = this;
+            Backbone.LocalCache.Models[self.getModelClassId()] = self.constructor;
+            self._parent.apply(self, arguments);
         },
 
         /**
@@ -284,9 +298,10 @@
          */
 
         getPendingOperations: function () {
-            return Backbone.LocalCache.CacheStorage.get(
+            var ops = Backbone.LocalCache.CacheStorage.get(
                 'pendingOperations:' + this.getModelClassId()
             ) || [];
+            return ops;
         },
 
         /**
@@ -358,7 +373,7 @@
                 self.executeOperations(deferred, operations);
             };
 
-            var model = new this.constructor(operation.data, { autoSync: false });
+            var model = new this.constructor(operation.data);
             self._parent.prototype.sync.call(self, operation.method, model, options);
         },
 
