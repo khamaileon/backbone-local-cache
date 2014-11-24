@@ -424,7 +424,7 @@
                 assert.deepEqual(resp, book.toJSON());
                 assert.deepEqual(Backbone.LocalCache.CacheStorage.get(storageKey), book.toJSON());
                 var pendingOperations = book.getPendingOperations();
-                assert.equal(_.size(pendingOperations), 1);
+                assert.equal(_.size(pendingOperations), 2);
             }
         });
 

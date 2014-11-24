@@ -63,10 +63,9 @@
 
     Backbone.LocalCache.Model = {
 
-        constructor : function (attributes, options) {
-            var self = this;
-            Backbone.LocalCache.Models[self.getModelClassId()] = self.constructor;
-            self._parent.apply(self, arguments);
+        constructor : function () {
+            Backbone.LocalCache.Models[this.getModelClassId()] = this.constructor;
+            this._parent.apply(this, arguments);
         },
 
         /**
@@ -95,15 +94,14 @@
 
         /**
          * Update storage key.
+         * Storage key move from uuid to url.
          */
 
         updateStorageKey: function () {
-            var self = this;
-            if (!self.isNew() && self.storageKey) {
-                Backbone.LocalCache.CacheStorage.set(self.url(), self.toJSON());
-                Backbone.LocalCache.CacheStorage.del(this.storageKey);
-                this.storageKey = this.url();
-            }
+            if (this.isNew() || !this.storageKey) return ;
+            Backbone.LocalCache.CacheStorage.set(this.url(), this.toJSON());
+            Backbone.LocalCache.CacheStorage.del(this.storageKey);
+            this.storageKey = this.url();
         },
 
         /**
@@ -113,7 +111,8 @@
          */
 
         getModelClassId: function () {
-            if (this.modelClassId === undefined) throw "modelClassId undefined";
+            if (this.modelClassId === undefined)
+                throw new Error('modelClassId undefined');
             return this.modelClassId;
         },
 
@@ -284,10 +283,18 @@
          * @param {object} operations
          */
 
-        setPendingOperations: function (operations) {
+        removePendingOperation: function (operation) {
+            var pendingOperations = this.getPendingOperations();
+            var found = _.findWhere(pendingOperations, {id: operation.id});
+            if (!found) return;
+
+            pendingOperations = _.without(pendingOperations, found);
+            if (_.isEmpty(pendingOperations))
+                return this.delPendingOperations();
+
             return Backbone.LocalCache.CacheStorage.set(
                 'pendingOperations:' + this.getModelClassId(),
-                operations
+                pendingOperations
             );
         },
 
@@ -338,43 +345,50 @@
 
         executePendingOperations: function () {
             var self = this;
-            var deferred = new $.Deferred();
-            var operations = self.getPendingOperations();
+            var pendingOperations = self.getPendingOperations();
 
-            self.executeOperations(deferred, operations);
+            // If there is no pending operations, stop here.
+            if (!pendingOperations.length) return ;
 
-            return deferred
-                .done(function (operations) {
-                    self.setPendingOperations(operations);
-                    if (_.isEmpty(operations)) self.delPendingOperations();
+            /**
+             * Execute a pending operation.
+             *
+             * @param {object} operation
+             * @returns {Promise}
+             */
+
+            function executeOperation(operation) {
+                var deferred = new $.Deferred();
+                var options = _.extend({}, operation.options, {
+                    autoSync: false
                 });
-        },
 
-        /**
-         * Execute recursively all pending operations.
-         *
-         * @param {object} [deferred]
-         * @param {object[]} [operations]
-         */
+                options.success = function () {
+                    deferred.resolve(operation);
+                };
 
-        executeOperations: function (deferred, operations) {
-            var self = this;
-            if (_.isEmpty(operations)) return deferred.resolve(operations);
+                options.error = function (resp) {
+                    if (!resp.status) return deferred.reject();
+                    deferred.resolve(operation);
+                };
 
-            var operation = operations.shift();
-            var options = _.extend({}, operation.options);
+                self.sync(
+                    operation.method,
+                    self.clone().clear().set(operation.data),
+                    options
+                );
 
-            options.success = function () {
-                self.executeOperations(deferred, operations);
-            };
+                return deferred.promise();
+            }
 
-            options.error = function (resp) {
-                if (!resp.status) return deferred.resolve(operations);
-                self.executeOperations(deferred, operations);
-            };
-
-            var model = new this.constructor(operation.data);
-            self._parent.prototype.sync.call(self, operation.method, model, options);
+            // Execute operations sequentially.
+            return _.reduce(pendingOperations, function (promise, operation) {
+                return promise.then(function () {
+                    return executeOperation(operation).then(function () {
+                        self.removePendingOperation(operation);
+                    });
+                });
+            }, $.when());
         },
 
         /**
@@ -398,13 +412,18 @@
                 return self.executePendingOperations()
                 .fail(function () {
                     self.addPendingOperation({
+                        id: generateUUID(),
                         method: method,
                         data: data,
                         options: options
                     });
                 })
                 .done(function () {
-                    return self.sync(method, model, options);
+                    return self.sync(
+                        method,
+                        model,
+                        _.extend({}, options, {autoSync: false})
+                    );
                 });
             }
 
