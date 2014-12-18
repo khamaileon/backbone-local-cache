@@ -27,9 +27,6 @@
     },
     set: function (key, value) {
       return window.localStorage.setItem(key, JSON.stringify(value));
-    },
-    del: function (key) {
-      return window.localStorage.removeItem(key);
     }
   };
 
