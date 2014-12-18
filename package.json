@@ -25,6 +25,7 @@
   "homepage": "https://github.com/khamaileon/backbone-local-cache",
   "devDependencies": {
     "body-parser": "^1.9.2",
+    "chai": "^1.10.0",
     "cors": "^2.5.2",
     "express": "^4.10.1",
     "grunt": "^0.4.5",
@@ -33,8 +34,8 @@
     "karma": "^0.12.24",
     "karma-chrome-launcher": "^0.1.5",
     "karma-firefox-launcher": "^0.1.3",
-    "karma-qunit": "^0.1.4",
+    "karma-mocha": "^0.1.10",
     "lodash": "^2.4.1",
-    "qunitjs": "^1.15.0"
+    "mocha": "^2.0.1"
   }
 }

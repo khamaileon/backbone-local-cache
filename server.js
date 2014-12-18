@@ -127,6 +127,14 @@ app.put('/book/:id', function (req, res) {
     res.send(books[req.params.id]);
 });
 
+app.put('/book/:id', function (req, res) {
+    if (!books[req.params.id]) {
+        return res.status(404).send({});
+    }
+    _(books[req.params.id]).extend(req.body);
+    res.send(books[req.params.id]);
+});
+
 app.patch('/book/:id', function (req, res) {
     if (!books[req.params.id]) {
         return res.status(404).send({});
@@ -176,10 +184,14 @@ app.post('card', function (req, res) {
 });
 
 function startApp() {
+    if (appServer.started) return ;
+    appServer.started = true;
     appServer.listen(3000);
 }
 
 function stopApp() {
+    if (!appServer.started) return ;
+    appServer.started = false;
     appServer.close();
 }
 
